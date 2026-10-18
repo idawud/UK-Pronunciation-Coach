@@ -35,3 +35,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Pre-registered so C1 / A2 do not need to touch this block (subfolders must be
+  # listed separately).
+  assets:
+    - assets/content/
+    - assets/models/
