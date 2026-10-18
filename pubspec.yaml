@@ -1,0 +1,36 @@
+name: uk_pronunciation_coach
+description: "Offline coach that scores read-aloud passages against Standard Southern British English."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.5
+
+# Licence rule: only Apache-2.0, MIT, BSD or similar. No GPL/AGPL (CI licences job enforces).
+# Native plug-ins (record, permission_handler, sherpa_onnx, drift/sqlite, flutter_tts,
+# flutter_local_notifications, fl_chart, ...) are added by the agent that owns the feature.
+dependencies:
+  collection: ^1.19.1
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.4.3
+  freezed_annotation: ^3.1.0
+  go_router: ^18.1.0
+  json_annotation: ^4.12.0
+  meta: ^1.19.0
+  path: ^1.9.1
+
+dev_dependencies:
+  alchemist: ^0.14.1
+  build_runner: ^2.16.2
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+  freezed: ^4.0.3
+  integration_test:
+    sdk: flutter
+  json_serializable: ^6.14.1
+  mocktail: ^1.0.5
+
+flutter:
+  uses-material-design: true
