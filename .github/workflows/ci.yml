@@ -57,7 +57,7 @@ jobs:
         run: flutter test --coverage --exclude-tags golden
       - name: Coverage gate (85% engine/practice/data, 70% ui)
         run: python3 tools/ci/coverage_gate.py coverage/lcov.info
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-lcov
@@ -77,7 +77,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter test --tags golden
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: golden-failures
@@ -157,7 +157,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter build apk --debug
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: app-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
