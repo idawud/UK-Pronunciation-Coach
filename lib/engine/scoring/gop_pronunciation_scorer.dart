@@ -167,14 +167,20 @@ class _PhonemeStats {
 class _Analysis {
   _Analysis(this.scorer, this.passage, this.post, this.speech)
     : config = scorer.config,
-      vocab = ModelVocab(post.vocab, post.blankIndex),
-      frames = post.frames {
+      vocab = ModelVocab(
+        List<String>.of(post.vocab, growable: false),
+        post.blankIndex,
+      ),
+      // Plain list copy: freezed wraps model lists in unmodifiable views, which
+      // are slow in the hot loops.
+      frames = List<Float32List>.of(post.frames, growable: false) {
     mapper = PhonemeMapper(vocab, extraAccepted: config.extraAccepted);
     speechProb = Float64List(frames.length);
     for (var t = 0; t < frames.length; t++) {
       speechProb[t] = 1 - math.exp(frames[t][vocab.blankIndex]);
     }
-    argmax = Int32List(frames.length)..fillRange(0, frames.length, -2);
+    top = Int32List(frames.length * _topK);
+    topDone = Uint8List(frames.length);
   }
 
   final GopPronunciationScorer scorer;
@@ -186,7 +192,11 @@ class _Analysis {
   final List<Float32List> frames;
   late final PhonemeMapper mapper;
   late final Float64List speechProb;
-  late final Int32List argmax;
+
+  /// Best [_topK] phone ids per frame (best first, -1 padded), filled lazily.
+  late final Int32List top;
+  late final Uint8List topDone;
+  static const int _topK = 4;
 
   final List<_WordPlan> plans = [];
   final List<PhonemeUnit> units = [];
@@ -194,23 +204,36 @@ class _Analysis {
 
   int ms(int frame) => frame * post.frameMs;
 
-  /// Best phone id of frame [t] when it is confidently speech, else -1.
-  int speechPhone(int t) {
-    if (argmax[t] == -2) {
+  /// Offset of frame [t]'s best phone ids in [top].
+  int topOf(int t) {
+    final base = t * _topK;
+    if (topDone[t] == 0) {
+      topDone[t] = 1;
       final f = frames[t];
-      var best = -1;
-      var bestLp = double.negativeInfinity;
-      for (var q = 0; q < f.length; q++) {
-        if (vocab.isPhone[q] && f[q] > bestLp) {
-          bestLp = f[q].toDouble();
-          best = q;
+      final ids = vocab.phoneIds;
+      final best = Float64List(_topK)
+        ..fillRange(0, _topK, double.negativeInfinity);
+      top.fillRange(base, base + _topK, -1);
+      for (var i = 0; i < ids.length; i++) {
+        final v = f[ids[i]];
+        if (v <= best[_topK - 1]) continue;
+        var k = _topK - 1;
+        while (k > 0 && v > best[k - 1]) {
+          best[k] = best[k - 1];
+          top[base + k] = top[base + k - 1];
+          k--;
         }
+        best[k] = v;
+        top[base + k] = ids[i];
       }
-      argmax[t] = best >= 0 && math.exp(bestLp) >= config.speechFrameMinProb
-          ? best
-          : -1;
     }
-    return argmax[t];
+    return base;
+  }
+
+  /// Best phone id of frame [t] when the frame is speech, else -1.
+  int speechPhone(int t) {
+    if (speechProb[t] < config.speechFrameMinProb) return -1;
+    return top[topOf(t)];
   }
 
   ScoringAnalysis run() {
@@ -241,7 +264,6 @@ class _Analysis {
       wordUnitCounts: [for (final p in plans) p.unitCount],
       skipPenalty: config.skipWordPenalty,
     );
-
     final results = <WordResult>[];
     final spans = <WordSpan>[];
     var notScored = 0;
@@ -274,7 +296,6 @@ class _Analysis {
         ));
       }
     }
-
     final extras = _extraSpeech();
     final scored = results.where((r) => r.status != WordStatus.notScored);
     final accuracy = scored.isEmpty
@@ -342,6 +363,7 @@ class _Analysis {
     for (var p = 0; p < w.phonemes.length; p++) {
       stats.add(plan.unitsOf(p) == 0 ? null : _scorePhoneme(plan, p));
     }
+    if (stats.every((x) => x == null || x.heard == '')) return null;
     _checkIntrusiveR(plan, stats);
 
     // Unmappable phonemes take the word's mean score and a zero-length span.
@@ -384,7 +406,12 @@ class _Analysis {
       sum += score * wt;
       weight += wt;
     }
-    final score = (sum / weight).round().clamp(0, 100).toInt();
+    final worst = phonemes.fold(100, (m, ph) => math.min(m, ph.score));
+    final score = math
+        .min(sum / weight, worst + config.wordMaxAboveWorst)
+        .round()
+        .clamp(0, 100)
+        .toInt();
     return WordResult(
       index: w.index,
       text: w.text,
@@ -402,18 +429,18 @@ class _Analysis {
     final a = align!;
     final first = plan.phonemeFirstUnit[p];
     final n = plan.unitsOf(p);
-    final comp = Float64List(vocab.length);
     var gopSum = 0.0;
-    var speechSum = 0.0;
-    var speechFrames = 0;
     final heardParts = <String>[];
     var anyHeard = false;
+    final candidates = <int>[];
     for (var u = first; u < first + n; u++) {
       final ids = units[u].ids;
-      comp.fillRange(0, comp.length, 0);
       var expSum = 0.0;
       final s = a.unitStart[u];
       final e = a.unitEnd[u];
+      // Competitors: phones in the top few of any frame (the best competitor by
+      // mean log-posterior is, in practice, always among them).
+      candidates.clear();
       for (var t = s; t < e; t++) {
         final f = frames[t];
         var m = f[ids[0]].toDouble();
@@ -421,25 +448,29 @@ class _Analysis {
           if (f[ids[i]] > m) m = f[ids[i]].toDouble();
         }
         expSum += m;
-        for (var q = 0; q < f.length; q++) {
-          comp[q] += f[q];
+        final base = topOf(t);
+        for (var k = base; k < base + _topK; k++) {
+          final q = top[k];
+          if (q >= 0 && !ids.contains(q) && !candidates.contains(q)) {
+            candidates.add(q);
+          }
         }
-        speechSum += speechProb[t];
-        speechFrames++;
       }
       var best = -1;
-      for (var q = 0; q < comp.length; q++) {
-        if (vocab.isPhone[q] &&
-            !ids.contains(q) &&
-            (best < 0 || comp[q] > comp[best])) {
+      var bestSum = double.negativeInfinity;
+      for (final q in candidates) {
+        var sum = 0.0;
+        for (var t = s; t < e; t++) {
+          sum += frames[t][q];
+        }
+        if (sum > bestSum) {
+          bestSum = sum;
           best = q;
         }
       }
       final frameCount = e - s;
       final expMean = expSum / frameCount;
-      final compMean = best < 0
-          ? double.negativeInfinity
-          : comp[best] / frameCount;
+      final compMean = bestSum / frameCount;
       gopSum += expMean - compMean;
       if (compMean - expMean > config.heardMargin) {
         anyHeard = true;
@@ -450,7 +481,7 @@ class _Analysis {
     }
     final start = a.unitStart[first];
     final end = a.unitEnd[first + n - 1];
-    if (speechSum / speechFrames < config.droppedSpeechThreshold) {
+    if (!_hasOwnSpeech(first, n, start, end)) {
       return _PhonemeStats(config.droppedScore, '', start, end);
     }
     return _PhonemeStats(
@@ -459,6 +490,24 @@ class _Analysis {
       start,
       end,
     );
+  }
+
+  /// True when some frame of the phoneme (units `[first, first + n)`) is speech
+  /// that is not just the neighbouring phonemes' sound squeezed in by the forced
+  /// alignment; otherwise the sound was dropped.
+  bool _hasOwnSpeech(int first, int n, int start, int end) {
+    final own = units[first];
+    final neighbours = [
+      if (first > 0 && !units[first - 1].sameAs(own)) units[first - 1],
+      if (first + n < units.length &&
+          !units[first + n].sameAs(units[first + n - 1]))
+        units[first + n],
+    ];
+    for (var t = start; t < end; t++) {
+      final id = speechPhone(t);
+      if (id >= 0 && !neighbours.any((u) => u.ids.contains(id))) return true;
+    }
+    return false;
   }
 
   /// Flags vowels followed by a sounded r (British English is non-rhotic).
@@ -472,19 +521,19 @@ class _Analysis {
       int limit;
       if (p + 1 < phonemes.length) {
         if (_isR(phonemes[p + 1].ipa) || stats[p + 1] == null) continue;
-        limit = stats[p + 1]!.start;
+        limit = stats[p + 1]!.end;
       } else {
         final next = _nextSpokenPlan(plan.index);
         if (next != null) {
           final ph = next.word.phonemes.first.ipa;
           if (_isR(ph) || ssbeVowels.contains(normalizeIpa(ph))) continue;
-          limit = a.unitStart[next.firstUnit];
+          limit = a.unitEnd[next.firstUnit];
         } else {
           limit = frames.length;
         }
       }
       limit = math.min(limit, s.end + config.intrusiveRWindowFrames);
-      for (var t = s.end; t < limit; t++) {
+      for (var t = s.start; t < limit; t++) {
         final id = speechPhone(t);
         if (id >= 0 && rhoticSymbols.contains(vocab.symbols[id])) {
           s.heard = '${phonemes[p].ipa}ɹ';
