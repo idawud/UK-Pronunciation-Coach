@@ -1,0 +1,73 @@
+{
+  "clean_read.wav": {
+    "text": "On Thursday we walked by the river.",
+    "durationMs": 3211,
+    "sampleRate": 16000,
+    "peakDbfs": -3.1,
+    "expectedQuality": "ok",
+    "approxSpeechMs": [
+      [
+        300,
+        2320
+      ]
+    ]
+  },
+  "mispronounced_thursday.wav": {
+    "text": "On Tursday we walked by the river.",
+    "durationMs": 3166,
+    "sampleRate": 16000,
+    "peakDbfs": -3.1,
+    "expectedQuality": "ok",
+    "approxSpeechMs": [
+      [
+        300,
+        2280
+      ]
+    ]
+  },
+  "read_then_silence.wav": {
+    "text": "On Thursday we walked by the river. Then 3 s of silence (silenceDetected after 2 s).",
+    "durationMs": 5711,
+    "sampleRate": 16000,
+    "peakDbfs": -3.1,
+    "expectedQuality": "ok",
+    "approxSpeechMs": [
+      [
+        300,
+        2320
+      ]
+    ]
+  },
+  "quiet_read.wav": {
+    "text": "On Thursday we walked by the river. Peak -40 dBFS.",
+    "durationMs": 3211,
+    "sampleRate": 16000,
+    "peakDbfs": -40.0,
+    "expectedQuality": "tooQuiet",
+    "approxSpeechMs": []
+  },
+  "noisy_read.wav": {
+    "text": "On Thursday we walked by the river. White noise, SNR ~5 dB.",
+    "durationMs": 3211,
+    "sampleRate": 16000,
+    "peakDbfs": -1.8,
+    "expectedQuality": "tooNoisy",
+    "approxSpeechMs": []
+  },
+  "silence.wav": {
+    "text": "2 s of near-silence.",
+    "durationMs": 2000,
+    "sampleRate": 16000,
+    "peakDbfs": -90.3,
+    "expectedQuality": "tooQuiet",
+    "approxSpeechMs": []
+  },
+  "noise.wav": {
+    "text": "2 s of white noise, -20 dBFS RMS.",
+    "durationMs": 2000,
+    "sampleRate": 16000,
+    "peakDbfs": -7.5,
+    "expectedQuality": "tooNoisy",
+    "approxSpeechMs": []
+  }
+}
