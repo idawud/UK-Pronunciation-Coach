@@ -1,0 +1,164 @@
+# Required on every pull request and on main. Job names are the branch-protection
+# check names listed in docs/ci.md.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.47.7"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Format (generated files excluded)
+        run: |
+          git ls-files -- '*.dart' | grep -vE '\.(g|freezed)\.dart$' |
+            xargs dart format --output=none --set-exit-if-changed
+      - run: flutter analyze --fatal-infos
+      - name: Generated code is up to date
+        run: |
+          dart run build_runner build
+          git diff --exit-code
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Unit, widget, contract and content tests
+        run: flutter test --coverage --exclude-tags golden
+      - name: Coverage gate (85% engine/practice/data, 70% ui)
+        run: python3 tools/ci/coverage_gate.py coverage/lcov.info
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: ignore
+
+  golden:
+    name: golden
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test --tags golden
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: golden-failures
+          path: test/**/failures/
+          if-no-files-found: ignore
+
+  python:
+    name: python
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: tools/**/requirements*.txt
+      - name: Install tools requirements
+        run: |
+          python -m pip install --upgrade pip
+          for f in $(git ls-files 'tools/**requirements*.txt'); do pip install -r "$f"; done
+      - run: ruff check tools
+      - run: ruff format --check tools
+      - run: pytest tools --cov --cov-report=term-missing
+
+  content:
+    name: content
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Passage bundle schema check
+        run: python tools/ci/check_content.py
+      # C1-content adds a step here that rebuilds passages.v1.json with tools/content
+      # and fails on `git diff --exit-code assets/content` (no hand edits).
+
+  licences:
+    name: licences
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: tools/**/requirements*.txt
+      - name: Install tools requirements (to read their licence metadata)
+        run: for f in $(git ls-files 'tools/**requirements*.txt'); do pip install -r "$f"; done
+      - name: No GPL/AGPL; every model, voice and dictionary in docs/licences.md
+        run: python tools/ci/check_licences.py
+
+  build-android:
+    name: build-android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build apk --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
