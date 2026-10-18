@@ -70,8 +70,17 @@ def is_generated(path: str) -> bool:
     return path.endswith(GENERATED)
 
 
+_HAS_BODY = re.compile(r"=>|\)\s*(async\*?|sync\*)?\s*\{")
+
+
 def code_lines(source: str) -> int:
-    """Rough count of executable lines in a Dart file that no test loaded."""
+    """Rough count of executable lines in a Dart file that no test loaded.
+
+    Files without any function body (abstract interfaces, typedefs, plain enums)
+    have nothing to execute, so they count as 0 lines, as lcov would report them.
+    """
+    if not _HAS_BODY.search(source):
+        return 0
     count = 0
     in_block_comment = False
     for line in source.splitlines():

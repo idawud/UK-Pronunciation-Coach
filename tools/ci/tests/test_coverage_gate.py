@@ -46,6 +46,18 @@ int f() {
     assert cg.code_lines(src) == 2
 
 
+def test_code_lines_ignores_files_without_bodies():
+    interface = """abstract interface class Tips {
+  /// Advice.
+  String? tipFor(String expected, String? heard);
+}
+typedef Clock = DateTime Function();
+"""
+    assert cg.code_lines(interface) == 0
+    assert cg.code_lines("enum A { x; bool get y => true; }") == 1
+    assert cg.code_lines("Stream<int> f() async* {\n  yield 1;\n}\n") == 2
+
+
 def test_evaluate_counts_untested_files(tmp_path):
     write(tmp_path, "lib/engine/scoring/a.dart", "int a() {\n  return 1;\n}\n")
     write(tmp_path, "lib/engine/scoring/b.dart", "int b() {\n  return 2;\n}\n")
