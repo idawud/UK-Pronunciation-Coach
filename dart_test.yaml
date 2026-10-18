@@ -1,0 +1,4 @@
+tags:
+  golden:
+    # alchemist golden tests. Readable goldens only render on Linux; CI runs them in
+    # the ubuntu "golden" job. Update with: flutter test --update-goldens --tags golden

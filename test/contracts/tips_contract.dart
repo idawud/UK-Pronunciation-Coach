@@ -20,7 +20,7 @@ void runTipsContract(Tips Function() create) {
 
     test('never returns an empty string', () {
       for (final a in sampleVocab) {
-        for (final b in [...sampleVocab, '', '${a}ɹ']) {
+        for (final b in [...sampleVocab, '', '$aɹ']) {
           final tip = tips.tipFor(a, b);
           if (tip != null) expect(tip.trim(), isNotEmpty, reason: '$a -> $b');
         }
