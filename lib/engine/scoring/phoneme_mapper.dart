@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'data/phoneme_map.dart';
 
 /// Normalises an IPA phoneme: strips stress marks and tie bars, writes length as `ː`.
@@ -15,6 +17,10 @@ class ModelVocab {
           i != blankIndex && !_special.hasMatch(symbols[i]),
       ] {
     RangeError.checkValidIndex(blankIndex, symbols, 'blankIndex');
+    phoneIds = Int32List.fromList([
+      for (var i = 0; i < symbols.length; i++)
+        if (isPhone[i]) i,
+    ]);
   }
 
   static final RegExp _special = RegExp(r'^<.*>$');
@@ -30,6 +36,9 @@ class ModelVocab {
 
   /// True for ids that are phones (not blank or special).
   final List<bool> isPhone;
+
+  /// Ids of the phones, ascending.
+  late final Int32List phoneIds;
 
   /// Number of symbols.
   int get length => symbols.length;
