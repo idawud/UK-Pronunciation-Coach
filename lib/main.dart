@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'app.dart';
 
 void main() {
-  runApp(const MaterialApp(home: Scaffold(body: Center(child: Text('UK Pronunciation Coach')))));
+  runApp(const ProviderScope(child: CoachApp()));
 }
