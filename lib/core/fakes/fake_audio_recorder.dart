@@ -3,11 +3,14 @@ import 'dart:async';
 import '../contracts/audio_recorder.dart';
 import '../contracts/errors.dart';
 import '../models/models.dart';
+import 'sample_data.dart';
 
 /// Working in-memory [AudioRecorder]: no microphone, no files.
 ///
 /// While recording it emits [levels] every [levelInterval], then (if
-/// [emitSilenceAfterLevels]) fires `silenceDetected` once. [stop] returns [clip].
+/// [emitSilenceAfterLevels]) fires `silenceDetected` once. [stop] returns [clip]
+/// (by default as long as the canned river reading). Pass `segments` to fix what
+/// [speechSegments] returns.
 class FakeAudioRecorder implements AudioRecorder {
   /// Creates a fake recorder. Tweak the public fields to simulate states.
   FakeAudioRecorder({
@@ -20,9 +23,9 @@ class FakeAudioRecorder implements AudioRecorder {
     this._segments,
   }) : clip =
            clip ??
-           const AudioClip(
+           AudioClip(
              path: '/fake/recordings/sample.wav',
-             duration: Duration(milliseconds: 3800),
+             duration: riverPosteriors.duration,
            ),
        levels =
            levels ??

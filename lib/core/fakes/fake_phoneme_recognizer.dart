@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import '../contracts/errors.dart';
 import '../contracts/phoneme_recognizer.dart';
@@ -9,7 +10,8 @@ import 'sample_data.dart';
 /// full-model download. No model files, no network.
 class FakePhonemeRecognizer implements PhonemeRecognizer {
   /// Creates the fake. By default [recognise] returns posteriors matching
-  /// `cannedRiverAttempt`; pass [posteriorsFor] to change that.
+  /// `cannedRiverAttempt`; pass `posteriorsFor` to change that. Either way the frames
+  /// are padded with blanks or truncated to match the clip's duration.
   FakePhonemeRecognizer({
     this.recommended = ModelTier.full,
     this.fullAvailable = false,
@@ -65,7 +67,23 @@ class FakePhonemeRecognizer implements PhonemeRecognizer {
     if (tier == null) throw StateError('No model loaded');
     recogniseCount++;
     final p = _posteriorsFor?.call(clip) ?? riverPosteriors;
-    return p.copyWith(tier: tier);
+    return _fit(p, clip.duration).copyWith(tier: tier);
+  }
+
+  /// Pads with blank frames, or truncates, so the frame count matches [duration].
+  static PhonemePosteriors _fit(PhonemePosteriors p, Duration duration) {
+    final n = duration.inMilliseconds ~/ p.frameMs;
+    if (n == p.frames.length) return p;
+    if (n < p.frames.length) return p.copyWith(frames: p.frames.sublist(0, n));
+    final blank = Float32List(p.vocab.length)
+      ..fillRange(0, p.vocab.length, -12)
+      ..[p.blankIndex] = 0;
+    return p.copyWith(
+      frames: [
+        ...p.frames,
+        for (var i = p.frames.length; i < n; i++) Float32List.fromList(blank),
+      ],
+    );
   }
 
   @override
