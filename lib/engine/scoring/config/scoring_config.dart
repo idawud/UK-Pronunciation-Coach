@@ -58,7 +58,7 @@ class ScoringConfig {
     this.heardMargin = 0,
     this.skipWordPenalty = 5,
     this.missedSpeechThreshold = 0.3,
-    this.droppedSpeechThreshold = 0.15,
+    this.wordMaxAboveWorst = 50,
     this.droppedScore = 0,
     this.intrusiveRScore = 45,
     this.intrusiveRWindowFrames = 10,
@@ -100,10 +100,7 @@ class ScoringConfig {
         'missedSpeechThreshold',
         d.missedSpeechThreshold,
       ),
-      droppedSpeechThreshold: n(
-        'droppedSpeechThreshold',
-        d.droppedSpeechThreshold,
-      ),
+      wordMaxAboveWorst: n('wordMaxAboveWorst', d.wordMaxAboveWorst),
       droppedScore: i('droppedScore', d.droppedScore),
       intrusiveRScore: i('intrusiveRScore', d.intrusiveRScore),
       intrusiveRWindowFrames: i(
@@ -190,10 +187,11 @@ class ScoringConfig {
   /// frames is below this is marked missed.
   final double missedSpeechThreshold;
 
-  /// A phoneme whose mean speech probability is below this was dropped (`heard: ''`).
-  final double droppedSpeechThreshold;
+  /// A word scores at most its worst phoneme plus this, so one clearly wrong
+  /// sound keeps the word out of green (100 disables the cap).
+  final double wordMaxAboveWorst;
 
-  /// Score of a dropped phoneme.
+  /// Score of a dropped phoneme (no speech of its own in its aligned frames).
   final int droppedScore;
 
   /// Highest score a vowel gets when an r is sounded after it (non-rhotic English).
@@ -260,7 +258,7 @@ class ScoringConfig {
     'heardMargin': heardMargin,
     'skipWordPenalty': skipWordPenalty,
     'missedSpeechThreshold': missedSpeechThreshold,
-    'droppedSpeechThreshold': droppedSpeechThreshold,
+    'wordMaxAboveWorst': wordMaxAboveWorst,
     'droppedScore': droppedScore,
     'intrusiveRScore': intrusiveRScore,
     'intrusiveRWindowFrames': intrusiveRWindowFrames,
