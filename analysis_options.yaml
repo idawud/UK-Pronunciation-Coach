@@ -6,6 +6,8 @@ analyzer:
     - "**/*.freezed.dart"
     - build/**
     - .venv/**
+    - android/**
+    - ios/**
   language:
     strict-casts: true
     strict-raw-types: true

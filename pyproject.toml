@@ -1,0 +1,22 @@
+# Dev-side Python settings for tools/ (pytest, coverage, ruff). Nothing here ships.
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
+pythonpath = ["."]
+testpaths = ["tools"]
+
+[tool.coverage.run]
+source = ["tools"]
+omit = ["*/tests/*", "*/conftest.py"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_empty = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv", "build"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
