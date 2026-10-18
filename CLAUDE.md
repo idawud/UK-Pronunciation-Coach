@@ -64,13 +64,15 @@ Keep commits small with clear messages. Open a PR to `main` per agent branch; al
 
 ## Commands
 
+Setup in each shell: `export PATH="$HOME/flutter/bin:$PATH"` and `source .venv/bin/activate` (Python tools; create with `python3 -m venv .venv && pip install -r tools/requirements-dev.txt` in a fresh worktree).
+
 ```bash
 scripts/check.sh                     # run before every push: format, analyze, tests + coverage gate, pytest
 dart format --set-exit-if-changed .
 flutter analyze --fatal-infos
 flutter test --coverage              # unit + widget + contract + golden
 flutter test test/engine/scoring     # one folder
-dart run build_runner build --delete-conflicting-outputs   # after editing freezed/json/drift sources
+dart run build_runner build   # after editing freezed/json/drift sources
 flutter test integration_test/<agent-id>   # on-device tests (emulator/simulator)
 python3 tools/ci/coverage_gate.py coverage/lcov.info
 pytest tools/ && ruff check tools/
