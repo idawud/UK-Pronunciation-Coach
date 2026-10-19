@@ -268,6 +268,9 @@ def main(argv: list[str] | None = None, downloader=None) -> int:
     parser = argparse.ArgumentParser(description="Prepare VCTK clips (CC-BY-4.0)")
     parser.add_argument("--index", action="store_true", help="print the speaker/shard index")
     parser.add_argument("--shards", default="auto", help="`auto`, `all` or e.g. `0,3,5-7`")
+    parser.add_argument(
+        "--parquet", type=Path, nargs="+", help="already-downloaded shard files (skip the Hub)"
+    )
     parser.add_argument("--speakers", help="comma-separated speaker ids")
     parser.add_argument("--accent", choices=["english", "southern"], help="VCTK accent filter")
     parser.add_argument("--exclude-eval", action="store_true", help="drop held-out speakers")
@@ -280,7 +283,10 @@ def main(argv: list[str] | None = None, downloader=None) -> int:
     if args.out is None:
         parser.error("--out is required")
     speakers = select_speakers(args.accent, args.speakers, args.exclude_eval)
-    paths = fetch_shards(shard_names(args.shards, speakers), downloader)
+    if args.parquet:
+        paths = args.parquet
+    else:
+        paths = fetch_shards(shard_names(args.shards, speakers), downloader)
     write_clips(iter_rows(paths, speakers), args.out, args.per_speaker)
     return 0
 
