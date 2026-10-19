@@ -100,16 +100,22 @@ void main() {
   });
 
   test('a substituted phoneme lowers the word and reports heard', () {
-    final good = analyse(read(p));
-    final a = analyse(
-      read(
-        p,
-        subs: {
-          1: {0: 't'},
-          21: {1: 'æ', 2: 'f'},
-        },
-      ),
+    // A3's mapping only: I2-eval's extraAccepted lets a schwa accept `æ`, and in
+    // this synthetic read the substituted `æ` of "bath" is then aligned to a
+    // neighbouring schwa, which moves the heard attribution (the word is still red).
+    const a3Mapping = GopPronunciationScorer(
+      config: ScoringConfig(extraAccepted: {}),
     );
+    final rGood = read(p);
+    final good = a3Mapping.analyse(p, rGood.post, rGood.speech);
+    final rSub = read(
+      p,
+      subs: {
+        1: {0: 't'},
+        21: {1: 'æ', 2: 'f'},
+      },
+    );
+    final a = a3Mapping.analyse(p, rSub.post, rSub.speech);
     final thursday = a.words[1];
     expect(thursday.phonemes.first.heard, 't');
     expect(thursday.phonemes.first.score, lessThan(20));
@@ -194,7 +200,7 @@ void main() {
     final walked = a.words[3];
     expect(walked.status, isNot(WordStatus.missed));
     expect(walked.phonemes[3].heard, '');
-    expect(walked.phonemes[3].score, 0);
+    expect(walked.phonemes[3].score, scorer.config.droppedScore);
     expect(const TableTips().tipFor('t', ''), isNotNull);
   });
 
@@ -336,7 +342,7 @@ void main() {
       final a = scorer.analyse(farm, s.build(), const []);
       final ah = a.words[1].phonemes[1];
       expect(ah.heard, 'ɑːɹ');
-      expect(ah.score, lessThanOrEqualTo(45));
+      expect(ah.score, lessThanOrEqualTo(scorer.config.intrusiveRScore));
     });
 
     test(
@@ -368,15 +374,18 @@ void main() {
 
   group('word scores', () {
     test('stressed vowels weigh 1.5', () {
-      final a = analyse(
-        read(
-          p,
-          subs: {
-            14: {1: 'æ'},
-          },
-        ),
+      // Cap off (I2-eval's tuned cap of worst + 40 would bind here and hide the
+      // weighting).
+      const uncapped = GopPronunciationScorer(
+        config: ScoringConfig(wordMaxAboveWorst: 100),
       );
-      final farm = a.words[14];
+      final r = read(
+        p,
+        subs: {
+          14: {1: 'æ'},
+        },
+      );
+      final farm = uncapped.analyse(p, r.post, r.speech).words[14];
       final s = [for (final ph in farm.phonemes) ph.score];
       expect(farm.score, ((s[0] + 1.5 * s[1] + s[2]) / 3.5).round());
     });
