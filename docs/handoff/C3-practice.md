@@ -72,10 +72,12 @@ repository on first use.
 
 ## Tests
 
-`test/practice/` (122 tests, all passing):
+`test/practice/` (109 tests, all passing under TZ=UTC, America/New_York, Asia/Tokyo
+and Europe/London):
 
-- The `runPracticeEngineContract` suite, run twice: on device-local DateTimes, and on
-  UTC instants with Europe/London rules (`test/practice/zones.dart`).
+- The `runPracticeEngineContract` suite (device time zone; the suite stamps attempts
+  with device-local DateTimes, so it is not rerun under an injected zone).
+  Europe/London behaviour is tested separately with UTC instants (`test/practice/zones.dart`).
 - Table-driven tests for the level rules, placement (including an exhaustive
   monotonicity check), review intervals (1/3/7/21, reset, repeat, graduate), streaks,
   splitting at midnight, both 2026 UK clock changes, the 25-hour day, and travel
