@@ -17,8 +17,6 @@ Uint8List _wav({
   final b = BytesBuilder();
   void u32(int v) =>
       b.add((ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List());
-  void u16(int v) =>
-      b.add((ByteData(2)..setUint16(0, v, Endian.little)).buffer.asUint8List());
   final data = BytesBuilder();
   for (final s in samples) {
     data.add((ByteData(2)..setInt16(0, s, Endian.little)).buffer.asUint8List());
