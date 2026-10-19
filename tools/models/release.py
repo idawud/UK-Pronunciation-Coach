@@ -45,7 +45,7 @@ def stage_assets(release_dir: Path, manifest: dict, staging: Path) -> None:
     """Copies `<tier>/<file>` to flat asset names in [staging] (hard link when possible)."""
     staging.mkdir(parents=True, exist_ok=True)
     for f in manifest["files"]:
-        src, dst = release_dir / f["name"], staging / f["asset"]
+        src, dst = release_dir / f["path"], staging / f["asset"]
         if dst.exists():
             dst.unlink()
         try:

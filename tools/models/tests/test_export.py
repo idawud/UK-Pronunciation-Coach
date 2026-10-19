@@ -25,6 +25,21 @@ def test_export_writes_int8_model_and_vocab(tiny_export):
     assert summary["int8_bytes"] < summary["fp32_bytes"]
 
 
+def test_weights_are_uint8_and_load_on_cpu(tiny_export):
+    import onnx
+
+    release, _, summary = tiny_export
+    model = onnx.load(str(release / "model.onnx"))
+    quantised = [t for t in model.graph.initializer if t.name.endswith("_quantized")]
+    assert quantised, "no quantised weights found"
+    assert {t.data_type for t in quantised} == {onnx.TensorProto.UINT8}
+    assert summary["weight_type"] == "uint8"
+    ops = {n.op_type for n in model.graph.node}
+    assert "MatMulInteger" in ops and "ConvInteger" not in ops
+    sess = ex.session(release / "model.onnx")
+    assert sess.get_providers() == ["CPUExecutionProvider"]
+
+
 def test_graph_contract(tiny_export):
     release, _, _ = tiny_export
     sess = ex.session(release / "model.onnx")
@@ -91,7 +106,7 @@ def test_cli_end_to_end_with_manifest(tiny_model_dir, tmp_path, capsys):
     manifest = mf.build_manifest(release)
     mf.write_manifest(release, manifest)
     assert mf.verify_manifest(release) == []
-    assert {f["name"] for f in manifest["files"]} == {"full/model.onnx", "full/vocab.json"}
+    assert {f["name"] for f in manifest["files"]} == {"full-model.onnx", "full-vocab.json"}
     assert "int8_bytes" in capsys.readouterr().out
 
 
