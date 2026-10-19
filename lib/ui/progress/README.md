@@ -1,7 +1,9 @@
 # lib/ui/progress (owner: U4-progress)
 
-Progress (`ProgressScreen`) and Settings (`SettingsScreen`, `LicencesScreen`),
-both built by the router. Model tier download via `PhonemeRecognizer.downloadProgress`;
-export / import / delete via `ProgressRepository`.
+`ProgressScreen` (built by the router): summary (level, streak, today vs goal), score
+trend (fl_chart), level history, sounds weakest first, streak calendar. Data comes
+from `progressDataProvider` (`progress_data.dart`), which reads `ProgressRepository`
+and `PracticeEngine` and refreshes on every progress write. Colours come from
+`Theme.of(context)` and `ScoreColors.of(context)` only.
 
-Tests: `test/ui/progress/`; goldens in `test/ui/goldens/`.
+Tests: `test/ui/progress/`; goldens in `test/ui/goldens/progress_golden_test.dart`.

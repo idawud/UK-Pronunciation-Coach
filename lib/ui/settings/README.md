@@ -1,7 +1,14 @@
 # lib/ui/settings (owner: U4-progress)
 
-Progress (`ProgressScreen`) and Settings (`SettingsScreen`, `LicencesScreen`),
-both built by the router. Model tier download via `PhonemeRecognizer.downloadProgress`;
-export / import / delete via `ProgressRepository`.
+`SettingsScreen` and `LicencesScreen` (built by the router).
 
-Tests: `test/ui/settings/`; goldens in `test/ui/goldens/`.
+- `model_tier_section.dart`: tier choice and full-model download through
+  `PhonemeRecognizer` (`settings_providers.dart` streams `downloadProgress`).
+- `voice_section.dart`: British voice check through `VoiceService`.
+- `reminder_scheduler.dart`: `ReminderScheduler` adapter + provider (local
+  notifications; see docs/contract-requests/U4-progress.md).
+- `backup_files.dart`: `BackupFiles` adapter + provider for export / import.
+- `licence_data.dart`: shipped models, dictionary, voices, content, engines and fonts,
+  seeded from docs/licences.md (keep in step).
+
+Tests: `test/ui/settings/`; goldens in `test/ui/goldens/settings_golden_test.dart`.
