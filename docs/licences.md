@@ -17,6 +17,7 @@ everything in the "Shipped" table.
 | _Britfone dictionary (planned)_ | _tbd by C1_ | MIT | Britfone | C1 |
 | _Passages (planned)_ | `passages.v1.json` | original or public domain, see `assets/content/SOURCES.md` | in-house | C1 |
 | _Piper en_GB voice (optional, off by default)_ | _tbd by C4_ | check the voice's own licence | Piper | C4 |
+| Noto Sans Regular (IPA-capable UI font, family `NotoSansIPA`) | `assets/fonts/NotoSans-Regular.ttf` (licence text: `assets/fonts/NotoSans-OFL.txt`) | SIL Open Font License 1.1 | notofonts/latin-greek-cyrillic (Google Fonts / Noto Project), SHA-256 478c558e…3823 | U1 |
 
 Replace each _planned_ row with the real file names when the component lands.
 Dart packages are checked automatically from `pubspec.lock`.
