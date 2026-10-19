@@ -13,6 +13,7 @@ dependencies:
   collection: ^1.19.1
   crypto: ^3.0.7
   device_info_plus: ^13.3.0
+  drift: ^2.35.2
   ffi: ^2.2.0
   flutter:
     sdk: flutter
@@ -30,6 +31,7 @@ dependencies:
 dev_dependencies:
   alchemist: ^0.14.1
   build_runner: ^2.16.2
+  drift_dev: ^2.35.1
   fake_async: ^1.3.3
   flutter_lints: ^6.0.0
   flutter_test:
