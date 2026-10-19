@@ -51,7 +51,7 @@ plain-joined with a note and retries are off (no `WordSpec`).
 ## Tests
 
 - `test/ui/results/results_screen_test.dart` (15), `test/ui/fix/fix_screen_test.dart`
-  (13), `test/ui/fix/hold_to_record_test.dart` (12), `test/ui/fix/sound_marks_test.dart`
+  (13), `test/ui/fix/hold_to_record_test.dart` (11), `test/ui/fix/sound_marks_test.dart`
   (4). Shared harness `test/ui/results/harness.dart` (GoRouter with a stub Read route
   that pops a configurable result; `tapWord`, `wordStyle`, `holdAndSay`).
 - Covered: retry loop on both screens (fake scorer 45 -> 72 -> 88), saving, light tier,
