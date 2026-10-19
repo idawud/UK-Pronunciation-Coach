@@ -319,7 +319,9 @@ class _Panel extends StatelessWidget {
       ReadScoring(:final stage, :final progress) => _ScoringPanel(
         stage: stage,
         progress: progress,
-        onCancel: stage == ScoringStage.saving ? null : c?.cancelScoring,
+        onCancel: stage == ScoringStage.saving
+            ? null
+            : c?.cancelScoring ?? _preview,
       ),
       ReadDone() => const _ScoringPanel(
         stage: ScoringStage.saving,
@@ -336,7 +338,7 @@ class _Panel extends StatelessWidget {
                   'stay on your phone.',
         action: FilledButton(
           onPressed: c == null
-              ? null
+              ? _preview
               : permanently
               ? c.openPermissionSettings
               : c.requestPermission,
@@ -364,7 +366,7 @@ class _Panel extends StatelessWidget {
             'Check that nothing covers the microphone and read aloud.',
         },
         action: FilledButton.icon(
-          onPressed: c?.startRecording,
+          onPressed: c?.startRecording ?? _preview,
           icon: const Icon(Icons.mic),
           label: const Text('Try again'),
         ),
@@ -374,7 +376,7 @@ class _Panel extends StatelessWidget {
         title: 'Something went wrong',
         body: message,
         action: FilledButton(
-          onPressed: c?.reset,
+          onPressed: c?.reset ?? _preview,
           child: const Text('Try again'),
         ),
       ),
@@ -437,7 +439,7 @@ class _RecordingPanel extends StatelessWidget {
           ),
         ),
         TextButton(
-          onPressed: controller?.discardRecording,
+          onPressed: controller?.discardRecording ?? _preview,
           child: const Text('Discard'),
         ),
       ],
@@ -540,3 +542,7 @@ class _Message extends StatelessWidget {
     );
   }
 }
+
+/// Action used when [ReadBody] has no controller (static previews and goldens), so
+/// buttons render enabled.
+void _preview() {}
