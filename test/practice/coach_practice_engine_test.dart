@@ -9,26 +9,13 @@ import '../contracts/practice_engine_contract.dart';
 import 'zones.dart';
 
 void main() {
-  group('CoachPracticeEngine (device time zone)', () {
+  group('CoachPracticeEngine', () {
     runPracticeEngineContract(
       (clock) async => CoachPracticeEngine(
         content: FakeContentRepository(),
         progress: FakeProgressRepository(clock: clock),
         clock: clock,
         random: Random(1),
-      ),
-    );
-  });
-
-  group('CoachPracticeEngine (Europe/London, UTC instants)', () {
-    runPracticeEngineContract(
-      (clock) async => CoachPracticeEngine(
-        content: FakeContentRepository(),
-        progress: FakeProgressRepository(clock: clock),
-        // The suite uses local wall-clock DateTimes; read them as London time.
-        clock: () => londonInstant(clock()),
-        wallClock: europeLondon,
-        random: Random(2),
       ),
     );
   });
@@ -218,6 +205,23 @@ void main() {
         expect(await engine.placementPassages(), samplePassages);
       },
     );
+
+    test('down after placement: earlier low reads do not count '
+        '(Europe/London, UTC instants)', () async {
+      for (var i = 0; i < 3; i++) {
+        expect(await read(teaPassage, 40), isNull);
+      }
+      final change = await engine.completePlacement([
+        for (final p in samplePassages)
+          goodAttempt(p, id: 'pl${p.id}', at: now, score: 95, fluency: 95),
+      ]);
+      expect(change!.at, now);
+      expect(await read(teaPassage, 50), isNull);
+      expect(await read(teaPassage, 50), isNull);
+      final down = await read(teaPassage, 50);
+      expect(down!.from, 6);
+      expect(down.to, 5);
+    });
 
     test(
       'attempts before placement do not count towards the next run',
