@@ -181,8 +181,8 @@ def candidates(
     shifts: Iterable[float] = (0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4),
     scales: Iterable[float] = (0.75, 1.0, 1.25, 1.5),
     caps: Iterable[float] = (40, 50, 60),
-    r_scores: Iterable[int] = (45, 65, 100),
-    dropped: Iterable[int] = (0, 40),
+    r_scores: Iterable[int] = (45, 65, 80, 100),
+    dropped: Iterable[int] = (0, 40, 60),
     weights: Iterable[float] = (1.5,),
 ) -> Iterable[Params]:
     for sh, sc, cap, rs, dr, wt in itertools.product(
