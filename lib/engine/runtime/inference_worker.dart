@@ -240,6 +240,7 @@ Object decodeWorkerError((String, String) error) {
     'state' => StateError(message),
     'format' => FormatException(message),
     'io' => FileSystemException(message),
+    'ort' => OnnxRuntimeException(message),
     _ => Exception(message),
   };
 }
@@ -249,6 +250,7 @@ Object decodeWorkerError((String, String) error) {
   StateError(:final message) => ('state', message),
   FormatException(:final message) => ('format', message),
   FileSystemException() => ('io', error.toString()),
+  OnnxRuntimeException(:final message) => ('ort', message),
   _ => ('other', error.toString()),
 };
 
