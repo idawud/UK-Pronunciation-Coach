@@ -113,9 +113,14 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Passage bundle schema check
-        run: python tools/ci/check_content.py
-      # C1-content adds a step here that rebuilds passages.v1.json with tools/content
-      # and fails on `git diff --exit-code assets/content` (no hand edits).
+        run: python tools/ci/check_content.py --require
+      # Rebuilds assets/content/ from the committed inputs in tools/content/ (Britfone,
+      # passage sources, reviewed lexicon_overrides.tsv; no eSpeak) and fails on any
+      # difference, so the bundle is never hand-edited.
+      - name: Rebuild content bundle (no hand edits)
+        run: |
+          python -m tools.content.build
+          git diff --exit-code -- assets/content tools/content/review.md
 
   licences:
     name: licences
