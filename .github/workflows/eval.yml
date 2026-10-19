@@ -1,0 +1,112 @@
+# Accuracy check (I2-eval): runs the real engine (full-tier ONNX model + GOP scorer) on
+# the stored eval set and the teacher-labelled learner set. Fails when native false red
+# is >= 5% or word agreement with the teacher labels is < 80%. Every part whose inputs
+# are missing (unpublished model, no learner audio, no labels yet) is SKIPPED and passes.
+# See tools/eval/README.md and docs/eval-report.md.
+name: eval
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * 1" # Mondays 05:00 UTC
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.47.7"
+  PYTHON_VERSION: "3.12"
+  VCTK: https://huggingface.co/datasets/jspaulsen/vctk/resolve/fb74847570d78d2b23e83193d8e55df80e6271b2/data
+
+jobs:
+  eval:
+    name: eval
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Python dependencies (dev-side only)
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -r tools/requirements-dev.txt soundfile==0.14.0 pyarrow==26.0.0
+      - run: flutter pub get
+
+      - name: Fetch the full-tier model (skipped until it is published)
+        id: model
+        run: |
+          .venv/bin/python - <<'EOF'
+          import hashlib, json, os, pathlib, urllib.request
+          out = pathlib.Path("eval-model")
+          manifest = pathlib.Path("assets/models/manifest.json")
+          files = json.loads(manifest.read_text())["files"] if manifest.exists() else []
+          want = {"full-model.onnx": "model.onnx", "full-vocab.json": "vocab.json"}
+          entries = [f for f in files if f.get("name") in want and "OWNER/REPO" not in f["url"]]
+          ok = len(entries) == 2
+          if ok:
+              out.mkdir(exist_ok=True)
+              for f in entries:
+                  dest = out / want[f["name"]]
+                  urllib.request.urlretrieve(f["url"], dest)
+                  digest = hashlib.sha256(dest.read_bytes()).hexdigest()
+                  if digest != f["sha256"]:
+                      raise SystemExit(f"{f['name']}: SHA-256 mismatch")
+          print("full model:", "fetched" if ok else "SKIPPED (not in assets/models/manifest.json)")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as gh:
+              gh.write(f"dir={out if ok else ''}\n")
+          EOF
+
+      - name: Native eval audio cache (VCTK, CC-BY-4.0)
+        if: steps.model.outputs.dir != ''
+        id: audio
+        uses: actions/cache@v6
+        with:
+          path: tools/eval/data/evalset/wav
+          key: eval-native-${{ hashFiles('tools/eval/evalset/clips.tsv') }}
+      - name: Build native eval audio (downloads 4 VCTK shards, ~2 GB)
+        if: steps.model.outputs.dir != '' && steps.audio.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p tools/eval/data/vctk
+          for i in 10 22 32 33; do
+            curl -sfL -o tools/eval/data/vctk/train-000$i-of-00034.parquet \
+              "$VCTK/train-000$i-of-00034.parquet"
+          done
+          .venv/bin/python -m tools.eval.build_set build --shards tools/eval/data/vctk
+          rm -rf tools/eval/data/vctk
+
+      - name: Learner audio (owner-supplied zip; skipped when not configured)
+        env:
+          LEARNER_AUDIO_URL: ${{ vars.EVAL_LEARNER_AUDIO_URL }}
+          LEARNER_AUDIO_TOKEN: ${{ secrets.EVAL_LEARNER_AUDIO_TOKEN }}
+        run: |
+          if [[ -z "$LEARNER_AUDIO_URL" ]]; then
+            echo "SKIPPED: set the EVAL_LEARNER_AUDIO_URL variable (zip of learners/<speaker>/<passage>.wav)"
+            exit 0
+          fi
+          auth=()
+          [[ -n "$LEARNER_AUDIO_TOKEN" ]] && auth=(-H "Authorization: Bearer $LEARNER_AUDIO_TOKEN")
+          curl -sfL "${auth[@]}" -o learners.zip "$LEARNER_AUDIO_URL"
+          mkdir -p tools/eval/data && unzip -q learners.zip -d tools/eval/data && rm learners.zip
+
+      - name: Harness, native false red and teacher agreement
+        env:
+          EVAL_MODEL_DIR: ${{ steps.model.outputs.dir }}
+        run: tools/eval/run_harness.sh
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: eval-results
+          path: |
+            tools/eval/work/*/*.csv
+            tools/eval/work/*/summary.json
+            tools/eval/work/agreement.json
+          if-no-files-found: ignore
