@@ -1,0 +1,83 @@
+# Level 4: about 100 words. News-style and workplace texts.
+# Sound focus: word stress and weak forms (to, for, of, and, a, the, can, was).
+# Original writing, 2026.
+
+=== l4-001 | New library opens
+focus: ə
+A new library has opened in the centre of Fairfield after two years of building work. The council spent four million pounds on the project, which includes a children's area, a cafe and twenty computers for the public. Local residents were invited to the opening on Saturday morning, and hundreds of families came to explore the shelves. The head librarian said that the building was designed to be a place for everyone, not just for readers. It will be open from nine until eight on weekdays, and until five at the weekend.
+
+=== l4-002 | Staff meeting notes
+focus: ə
+Thank you all for coming to this morning's meeting. There are three items to discuss. First, the office will be closed on the twenty-third of December for maintenance, so please plan to work from home that day. Second, we're looking for volunteers to organise the summer party. If you're interested, send an email to Rachel by the end of the week. Finally, a reminder that expense forms must be submitted before the last Friday of the month. Late forms can't be processed until the following month, which causes problems for the finance team.
+
+=== l4-003 | Rail delays
+focus: ə eɪ
+Passengers travelling between London and Brighton faced long delays on Monday after a signal failure near Croydon. Several trains were cancelled, and others were held at stations for up to an hour. A spokesperson for the rail company apologised to customers and said that engineers had worked through the night to repair the fault. Services returned to normal by the afternoon. Passengers whose journeys were delayed by more than thirty minutes can apply for compensation on the company's website. The company has promised a full investigation into the cause of the problem.
+
+=== l4-004 | A new manager
+focus: ə æ
+I'd like to introduce our new operations manager, Daniel Hughes. Daniel joins us from a large logistics firm in Manchester, where he managed a team of forty people for six years. He'll be responsible for improving our delivery times and reducing costs across the warehouse. Over the next few weeks, he'll be meeting each of you individually to learn about your role and to hear your ideas. Please make him welcome, and don't hesitate to ask him any questions. His office is on the second floor, next to the conference room.
+
+=== l4-005 | Weather warning
+focus: ə ɪ
+The Met Office has issued a yellow weather warning for heavy rain across much of Wales and the south-west of England. Up to fifty millimetres of rain could fall in some areas over the next two days, with a risk of flooding in low-lying places. Drivers are advised to take extra care on the roads and to allow more time for their journeys. Some schools may close early on Thursday. Conditions are expected to improve by the weekend, although temperatures will remain lower than average for the time of year.
+
+=== l4-006 | Job advertisement
+focus: ə
+We are looking for an enthusiastic sales assistant to join our friendly team in the town centre. The successful candidate will have excellent communication skills and a genuine interest in fashion. Previous experience in retail is an advantage but is not essential, as full training will be given. The role involves serving customers, managing stock and keeping the shop tidy. You will work thirty hours a week, including two Saturdays a month. To apply, please send your application form and a short covering letter to the store manager.
+
+=== l4-007 | School wins award
+focus: ə ɔː
+A primary school in Leeds has won a national award for its work on the environment. Pupils at Oak Lane Primary planted more than two hundred trees, built a wildlife pond and started a recycling scheme for the whole community. The head teacher said she was extremely proud of the children and their parents. The judges described the project as an example for schools across the country. The prize includes five thousand pounds, which the school plans to spend on a vegetable garden and a new outdoor classroom.
+
+=== l4-008 | IT system update
+focus: ə
+Please note that the company's computer system will be updated this Friday evening. The work will begin at six o'clock and should be finished by midnight. During this time, you won't be able to access your email or the shared drives. Before you leave on Friday, save all of your documents and log out of your computer, but leave it switched on. If you have any problems on Monday morning, contact the IT helpdesk as soon as possible. We apologise for any inconvenience and thank you for your patience.
+
+=== l4-009 | Cafe owner retires
+focus: ə æ
+After forty years behind the counter, Margaret Allen has served her last cup of tea. The owner of the popular Corner Cafe on the High Street retired on Friday, and dozens of customers came to say goodbye. Many of them had been visiting the cafe since they were children. Margaret said that the best part of the job had been the conversations. Her nephew will take over the business next month, and he has promised to keep the menu exactly as it is, including her famous carrot cake.
+
+=== l4-010 | Fire drill
+focus: ə
+There will be a fire drill at eleven o'clock on Wednesday morning. When the alarm sounds, please stop what you are doing and leave the building by the nearest exit. Don't use the lifts, and don't go back for your coat or bag. Gather in the car park at the front of the building and wait for your floor manager to check the list of names. The drill should take about fifteen minutes. If you have a disability that may affect your exit, please speak to the facilities team beforehand.
+
+=== l4-011 | Bus fares rise
+focus: ə eə
+Bus fares across the region will rise by ten per cent from the first of April, the transport authority announced yesterday. A single journey in the city centre will cost two pounds twenty, compared with two pounds today. The authority said the increase was necessary because of rising fuel and staff costs. However, passengers' groups have criticised the decision, arguing that higher fares will push more people into their cars. Students and pensioners will continue to receive discounts, and weekly tickets will still be available at the current price until June.
+
+=== l4-012 | Quarterly results
+focus: ə
+I'm pleased to report that our sales for the first quarter were twelve per cent higher than last year. Most of the growth came from our online shop, which has doubled its number of customers since January. However, costs have also risen, especially for transport and packaging, so our profits have grown more slowly. In the next quarter, we'll focus on reducing those costs and improving our service. I'd like to thank everyone in the team for their hard work, and especially the warehouse staff, who have coped with a very busy period.
+
+=== l4-013 | Festival returns
+focus: ə ɛ
+The town's summer music festival will return in July after a break of three years. Organisers expect more than ten thousand visitors over the two days. The programme includes local bands, a jazz stage and a tent for families, with activities for children of all ages. Tickets go on sale next Monday and can be bought online or from the town hall. Residents living near the park have been asked for their views on parking and noise, and extra buses will run to and from the station on both evenings.
+
+=== l4-014 | Training day
+focus: ə
+Next Tuesday, all customer service staff will attend a training day on handling complaints. The session will start at half past nine in the main meeting room and finish at four. A trainer from an external company will lead the morning, and the afternoon will be spent practising real situations in small groups. Lunch and refreshments will be provided. Please let your manager know as soon as possible if you can't attend, so that we can arrange a place for you on the next session in March.
+
+=== l4-015 | Hospital car park
+focus: ə ɑː
+Visitors to the city hospital will no longer have to pay for parking from next month, health officials confirmed on Tuesday. The charges, which can reach ten pounds a day, have been criticised for years by patients and their families. The hospital will use money from its own budget to cover the cost of the change. A spokesperson said that nobody should have to worry about money when visiting a relative who is seriously ill. Staff will also be able to park for free, although spaces remain limited at busy times.
+
+=== l4-016 | Holiday policy
+focus: ə ɒ
+I'm writing to remind everyone about our holiday policy. Each member of staff is entitled to twenty-five days of annual leave, plus bank holidays. Requests for more than one week of leave should be made at least a month in advance. Please check the team calendar before you book anything, as we need at least two people in the office at all times. Any leave that hasn't been used by the end of December can't be carried over to the next year, so do plan ahead.
+
+=== l4-017 | Cycle lanes
+focus: ə aɪ
+The city council has approved a plan to build twelve miles of new cycle lanes over the next three years. The lanes will connect the main residential areas with the city centre, the university and the railway station. Supporters say the scheme will reduce traffic, cut pollution and encourage people to live more healthily. However, some shop owners are worried that the loss of parking spaces could affect their business. The first section of the route, along the river, is due to open next spring.
+
+=== l4-018 | Client visit
+focus: ə
+Our biggest client is visiting the office on Thursday, so I'd like to go through the arrangements. They will arrive at ten and have a short tour of the building first. After that, we'll have a presentation in the boardroom, followed by lunch at the hotel across the road. Sophie will take notes, and Imran will prepare the figures for the new contract. Please make sure that the reception area is clean and tidy, and that the meeting room has enough chairs and a working projector.
+
+=== l4-019 | Village shop saved
+focus: ə ɒ
+A village shop that was due to close has been saved by its customers. When the owners of the shop in Little Hampton announced they were retiring, residents decided to buy the business themselves. More than three hundred people bought shares, raising over eighty thousand pounds. Volunteers now help to run the shop, which sells bread, newspapers and local vegetables. The chair of the group said the shop was the heart of the village, and that losing it would have been a disaster for older residents.
+
+=== l4-020 | Recycling changes
+focus: ə
+From the beginning of next month, the council is changing the way it collects household waste. Food waste will be collected every week in a small brown bin, while general rubbish will be collected every two weeks instead of weekly. Glass, paper and plastic can still be placed in the green recycling bin. Every home will receive a new bin and a leaflet explaining the changes. The council says the new system will save money and help the environment, but some residents are worried that bins will overflow in summer.

@@ -1,0 +1,97 @@
+# Words Britfone lacks. Columns: word, IPA (app spelling, stress on the vowel),
+# source, reviewed (yes/no). eSpeak NG lines are machine output, flagged for
+# human review in tools/content/review.md; correct the IPA and set reviewed=yes.
+# word	ipa	source	reviewed
+armchair	ˈɑː m tʃ eə	espeak-ng en-gb-x-rp	no
+armful	ˈɑː m f ə l	espeak-ng en-gb-x-rp	no
+batter	b ˈæ t ə	espeak-ng en-gb-x-rp	no
+bedtime	b ˈɛ d t aɪ m	espeak-ng en-gb-x-rp	no
+binoculars	b ɪ n ˈɒ k j ʊ l ə z	espeak-ng en-gb-x-rp	no
+blackbirds	b l ˈæ k b ɜː d z	espeak-ng en-gb-x-rp	no
+boardroom	b ˈɔː d ɹ uː m	espeak-ng en-gb-x-rp	no
+bookshop	b ˈʊ k ʃ ɒ p	espeak-ng en-gb-x-rp	no
+boredom	b ˈɔː d ə m	espeak-ng en-gb-x-rp	no
+brightly	b ɹ ˈaɪ t l i	espeak-ng en-gb-x-rp	no
+broadcasters	b ɹ ˈɔː d k ɑː s t ə z	espeak-ng en-gb-x-rp	no
+calmest	k ˈɑː m ɪ s t	espeak-ng en-gb-x-rp	no
+careless	k ˈeə l ə s	espeak-ng en-gb-x-rp	no
+chestnuts	tʃ ˈɛ s t n ʌ t s	espeak-ng en-gb-x-rp	no
+clara	k l ˈɑː ɹ ə	espeak-ng en-gb-x-rp	no
+classmates	k l ˈɑː s m eɪ t s	espeak-ng en-gb-x-rp	no
+clearest	k l ˈɪə ɹ ɪ s t	espeak-ng en-gb-x-rp	no
+coldest	k ˈəʊ l d ɪ s t	espeak-ng en-gb-x-rp	no
+collaborate	k ə l ˈæ b ə ɹ ˌeɪ t	espeak-ng en-gb-x-rp	no
+commute	k ə m j ˈuː t	espeak-ng en-gb-x-rp	no
+commuting	k ə m j ˈuː t ɪ ŋ	espeak-ng en-gb-x-rp	no
+compartment	k ə m p ˈɑː t m ə n t	espeak-ng en-gb-x-rp	no
+cookery	k ˈʊ k ə ɹ i	espeak-ng en-gb-x-rp	no
+creased	k ɹ ˈiː s t	espeak-ng en-gb-x-rp	no
+cyclists	s ˈaɪ k l ɪ s t s	espeak-ng en-gb-x-rp	no
+daffodils	d ˈæ f ə d ˌɪ l z	espeak-ng en-gb-x-rp	no
+drawbacks	d ɹ ˈɔː b æ k s	espeak-ng en-gb-x-rp	no
+dresser	d ɹ ˈɛ s ə	espeak-ng en-gb-x-rp	no
+encyclopaedias	ɪ n s ˌaɪ k l ə p ˈiː d i ə z	espeak-ng en-gb-x-rp, corrected by C1	no
+fairfield	f ˈeə f iː l d	espeak-ng en-gb-x-rp	no
+famously	f ˈeɪ m ə s l i	espeak-ng en-gb-x-rp	no
+farmhouse	f ˈɑː m h aʊ s	espeak-ng en-gb-x-rp	no
+feeder	f ˈiː d ə	espeak-ng en-gb-x-rp	no
+fenwick	f ˈɛ n w ɪ k	espeak-ng en-gb-x-rp	no
+fluent	f l ˈuː ə n t	espeak-ng en-gb-x-rp	no
+footfall	f ˈʊ t f ɔː l	espeak-ng en-gb-x-rp	no
+fortieth	f ˈɔː t i ə θ	espeak-ng en-gb-x-rp, corrected by C1	no
+grandparents	ɡ ɹ ˈæ n d p eə ɹ ə n t s	espeak-ng en-gb-x-rp	no
+greener	ɡ ɹ ˈiː n ə	espeak-ng en-gb-x-rp	no
+gull	ɡ ˈʌ l	espeak-ng en-gb-x-rp	no
+happiest	h ˈæ p i ɪ s t	espeak-ng en-gb-x-rp, corrected by C1	no
+healthily	h ˈɛ l θ ɪ l i	espeak-ng en-gb-x-rp	no
+helpdesk	h ˈɛ l p d ɛ s k	espeak-ng en-gb-x-rp	no
+impatient	ɪ m p ˈeɪ ʃ ə n t	espeak-ng en-gb-x-rp	no
+imran	ˈɪ m ɹ ɑː n	espeak-ng en-gb-x-rp, corrected by C1	no
+inconvenience	ˌɪ n k ə n v ˈiː n i ə n s	espeak-ng en-gb-x-rp, corrected by C1	no
+interruption	ˌɪ n t ə ɹ ˈʌ p ʃ ə n	espeak-ng en-gb-x-rp	no
+inventors	ɪ n v ˈɛ n t ə z	espeak-ng en-gb-x-rp	no
+joggers	dʒ ˈɒ ɡ ə z	espeak-ng en-gb-x-rp	no
+kingfisher	k ˈɪ ŋ f ɪ ʃ ə	espeak-ng en-gb-x-rp	no
+kirsty	k ˈɜː s t i	espeak-ng en-gb-x-rp	no
+lifelong	l ˈaɪ f l ɒ ŋ	espeak-ng en-gb-x-rp	no
+lukewarm	l ˈuː k w ɔː m	espeak-ng en-gb-x-rp	no
+mr	m ˈɪ s t ə	espeak-ng en-gb-x-rp	no
+mrs	m ˈɪ s ɪ z	espeak-ng en-gb-x-rp, corrected by C1	no
+muddle	m ˈʌ d ə l	espeak-ng en-gb-x-rp	no
+narrowboats	n ˈæ ɹ əʊ b ˌəʊ t s	espeak-ng en-gb-x-rp	no
+overflow	ˌəʊ v ə f l ˈəʊ	espeak-ng en-gb-x-rp	no
+overslept	ˌəʊ v ə s l ˈɛ p t	espeak-ng en-gb-x-rp	no
+patiently	p ˈeɪ ʃ ə n t l i	espeak-ng en-gb-x-rp	no
+pell	p ˈɛ l	espeak-ng en-gb-x-rp	no
+persuasion	p ə s w ˈeɪ ʒ ə n	espeak-ng en-gb-x-rp	no
+postmark	p ˈəʊ s t m ɑː k	espeak-ng en-gb-x-rp	no
+priya	p ɹ ˈiː j ə	espeak-ng en-gb-x-rp, corrected by C1	no
+quieter	k w ˈaɪ ə t ə	espeak-ng en-gb-x-rp	no
+receptionist	ɹ ɪ s ˈɛ p ʃ ə n ɪ s t	espeak-ng en-gb-x-rp, corrected by C1	no
+refreshments	ɹ ɪ f ɹ ˈɛ ʃ m ə n t s	espeak-ng en-gb-x-rp	no
+rehearsing	ɹ ɪ h ˈɜː s ɪ ŋ	espeak-ng en-gb-x-rp	no
+remotely	ɹ ɪ m ˈəʊ t l i	espeak-ng en-gb-x-rp	no
+retrain	ɹ ɪ t ɹ ˈeɪ n	espeak-ng en-gb-x-rp	no
+sandcastle	s ˈæ n d k ɑː s ə l	espeak-ng en-gb-x-rp	no
+scarves	s k ˈɑː v z	espeak-ng en-gb-x-rp	no
+schoolchildren	s k ˈuː l tʃ ɪ l d ɹ ə n	espeak-ng en-gb-x-rp	no
+seaside	s ˈiː s aɪ d	espeak-ng en-gb-x-rp	no
+shipwreck	ʃ ˈɪ p ɹ ɛ k	espeak-ng en-gb-x-rp	no
+shortcut	ʃ ˈɔː t k ʌ t	espeak-ng en-gb-x-rp	no
+smoother	s m ˈuː ð ə	espeak-ng en-gb-x-rp	no
+spokesperson	s p ˈəʊ k s p ə s ə n	espeak-ng en-gb-x-rp	no
+sunburnt	s ˈʌ n b ɜː n t	espeak-ng en-gb-x-rp	no
+tangle	t ˈæ ŋ ɡ ə l	espeak-ng en-gb-x-rp	no
+thankfully	θ ˈæ ŋ k f ə l i	espeak-ng en-gb-x-rp	no
+thatched	θ ˈæ tʃ t	espeak-ng en-gb-x-rp	no
+thoughtful	θ ˈɔː t f ə l	espeak-ng en-gb-x-rp	no
+towpath	t ˈəʊ p ɑː θ	espeak-ng en-gb-x-rp	no
+twisters	t w ˈɪ s t ə z	espeak-ng en-gb-x-rp	no
+unhealthy	ʌ n h ˈɛ l θ i	espeak-ng en-gb-x-rp	no
+walkways	w ˈɔː k w eɪ z	espeak-ng en-gb-x-rp	no
+weekday	w ˈiː k d eɪ	espeak-ng en-gb-x-rp	no
+weekdays	w ˈiː k d eɪ z	espeak-ng en-gb-x-rp	no
+wellbeing	w ˈɛ l b iː ɪ ŋ	espeak-ng en-gb-x-rp	no
+wisest	w ˈaɪ s ɪ s t	espeak-ng en-gb-x-rp	no
+wobbled	w ˈɒ b ə l d	espeak-ng en-gb-x-rp	no
+wristwatches	ɹ ˈɪ s t w ɒ tʃ ɪ z	espeak-ng en-gb-x-rp	no

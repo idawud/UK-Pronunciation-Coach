@@ -1,0 +1,24 @@
+# Minimal pairs, grouped by contrast. One line per contrast:
+#   <sound A>-<sound B>: wordA wordB, wordA wordB, ...
+# Sounds use the app's spelling (see tools/content/lexicon.py). The build checks that
+# each pair differs in exactly this one sound in Britfone.
+ɪ-iː: ship sheep, bit beat, fill feel, live leave, sit seat, chip cheap
+ʊ-uː: full fool, pull pool, look Luke, should shoed
+æ-ʌ: cat cut, bag bug, cap cup, ran run, hat hut
+æ-ɛ: bad bed, man men, sat set, pan pen
+ɒ-ɔː: cot caught, pot port, shot short, spot sport
+ʌ-ɑː: cut cart, hut heart, much march, bun barn
+ɜː-ɑː: heard hard, firm farm, burn barn, curt cart
+ɜː-ɔː: work walk, firm form, shirt short, word ward
+ɛ-eɪ: wet wait, pen pain, get gate, test taste
+θ-t: thin tin, three tree, thank tank, both boat
+θ-s: think sink, thick sick, path pass, mouth mouse
+θ-f: three free, thought fought, thin fin
+ð-d: they day, then den, those doze, breathe breed
+v-w: vest west, vet wet, vine wine, verse worse
+b-v: berry very, ban van, best vest
+l-ɹ: light right, long wrong, lead read, collect correct
+s-ʃ: sip ship, save shave, seat sheet, sour shower
+ʃ-tʃ: shop chop, sheep cheap, wash watch, share chair
+n-ŋ: thin thing, ban bang, win wing, run rung
+s-z: bus buzz, rice rise, place plays, price prize
