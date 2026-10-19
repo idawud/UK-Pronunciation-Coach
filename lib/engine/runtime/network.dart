@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
-
 /// A response body opened by [ModelTransport.get].
 class ModelResponse {
   /// Creates a response.
@@ -84,25 +82,62 @@ class AlwaysUnmetered implements NetworkMonitor {
   Stream<bool> get unmeteredChanges => const Stream.empty();
 }
 
-/// [NetworkMonitor] on the `connectivity_plus` plug-in: Wi-Fi or Ethernet counts as
-/// unmetered; mobile data, VPN-only, Bluetooth and none do not.
-class ConnectivityNetworkMonitor implements NetworkMonitor {
-  /// Creates the monitor; [connectivity] is injectable for tests.
-  ConnectivityNetworkMonitor({Connectivity? connectivity})
-    : _connectivity = connectivity ?? Connectivity();
+/// Lists the device's network interfaces (injectable for tests).
+typedef InterfaceLister = Future<List<NetworkInterface>> Function();
 
-  final Connectivity _connectivity;
+Future<List<NetworkInterface>> _listInterfaces() =>
+    NetworkInterface.list(includeLinkLocal: false);
 
-  /// True when [results] include Wi-Fi or Ethernet.
-  static bool unmetered(List<ConnectivityResult> results) =>
-      results.contains(ConnectivityResult.wifi) ||
-      results.contains(ConnectivityResult.ethernet);
+/// [NetworkMonitor] from the OS network interfaces (`dart:io`, no plug-in): the
+/// connection counts as unmetered when a Wi-Fi or Ethernet interface has a routable
+/// address (Android `wlan*` / `eth*`, iOS / macOS `en*`, Linux `wl*` / `en*` /
+/// `eth*`). Cellular interfaces (`rmnet*`, `ccmni*`, `pdp_ip*`), VPN tunnels and
+/// loopback do not count. Changes are found by polling every [interval].
+///
+/// Limits: a phone tethered to another phone's hotspot looks like Wi-Fi (the
+/// `connectivity_plus` plug-in has the same limit); it cannot see Android's
+/// "metered Wi-Fi" flag. See docs/handoff/A2-runtime.md for why this replaces
+/// `connectivity_plus`.
+class InterfaceNetworkMonitor implements NetworkMonitor {
+  /// Creates the monitor.
+  InterfaceNetworkMonitor({
+    InterfaceLister? lister,
+    this.interval = const Duration(seconds: 5),
+  }) : _lister = lister ?? _listInterfaces;
+
+  final InterfaceLister _lister;
+
+  /// Poll interval for [unmeteredChanges].
+  final Duration interval;
+
+  static final _unmeteredName = RegExp(r'^(wl|eth|en)\w*$');
+
+  /// True when [interfaces] include a Wi-Fi or Ethernet interface with an address.
+  static bool unmetered(List<NetworkInterface> interfaces) => interfaces.any(
+    (i) =>
+        _unmeteredName.hasMatch(i.name) &&
+        i.addresses.any((a) => !a.isLoopback && !a.isLinkLocal),
+  );
 
   @override
-  Future<bool> isUnmetered() async =>
-      unmetered(await _connectivity.checkConnectivity());
+  Future<bool> isUnmetered() async {
+    try {
+      return unmetered(await _lister());
+    } on SocketException {
+      return false;
+    }
+  }
 
   @override
-  Stream<bool> get unmeteredChanges =>
-      _connectivity.onConnectivityChanged.map(unmetered);
+  Stream<bool> get unmeteredChanges async* {
+    bool? last;
+    while (true) {
+      await Future<void>.delayed(interval);
+      final now = await isUnmetered();
+      if (now != last) {
+        last = now;
+        yield now;
+      }
+    }
+  }
 }

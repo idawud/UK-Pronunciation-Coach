@@ -11,7 +11,6 @@ environment:
 # flutter_local_notifications, fl_chart, ...) are added by the agent that owns the feature.
 dependencies:
   collection: ^1.19.1
-  connectivity_plus: ^7.3.2
   crypto: ^3.0.7
   device_info_plus: ^13.3.0
   ffi: ^2.2.0
