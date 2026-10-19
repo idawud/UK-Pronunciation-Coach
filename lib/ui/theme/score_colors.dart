@@ -4,6 +4,10 @@ import '../../core/models/enums.dart';
 
 /// Score colour tokens (U1 owns the values; the class name, fields and [of] are what
 /// U2/U3/U4 code against). Read with `ScoreColors.of(context)`, never hard-code colours.
+///
+/// Every value meets WCAG AA (4.5:1) as text on the theme's surface and card colours
+/// (checked in test/ui/theme/contrast_test.dart). Colour is never the only cue: pair it
+/// with `ScoreCue` (underline + icon) from score_cue.dart.
 @immutable
 class ScoreColors extends ThemeExtension<ScoreColors> {
   /// Creates the tokens.
@@ -26,20 +30,20 @@ class ScoreColors extends ThemeExtension<ScoreColors> {
   /// Words that are not scored.
   final Color notScored;
 
-  /// Placeholder light values (U1 replaces with WCAG AA checked colours).
+  /// Light theme values (AA on white and the light surface containers).
   static const light = ScoreColors(
-    good: Color(0xFF1B7F3B),
-    close: Color(0xFF9A6100),
+    good: Color(0xFF1B6E33),
+    close: Color(0xFF8A5000),
     fix: Color(0xFFB3261E),
-    notScored: Color(0xFF6B6B6B),
+    notScored: Color(0xFF5C5F66),
   );
 
-  /// Placeholder dark values.
+  /// Dark theme values (AA on the dark surface containers).
   static const dark = ScoreColors(
     good: Color(0xFF7BD88F),
     close: Color(0xFFFFC266),
     fix: Color(0xFFFF8A80),
-    notScored: Color(0xFFB0B0B0),
+    notScored: Color(0xFFB4B7BE),
   );
 
   /// The tokens of the current theme (light values if the theme has none).
@@ -53,6 +57,9 @@ class ScoreColors extends ThemeExtension<ScoreColors> {
     WordStatus.fix || WordStatus.missed => fix,
     WordStatus.notScored => notScored,
   };
+
+  /// Colour for a 0-100 [score] (default thresholds).
+  Color forScore(num score) => forStatus(WordStatus.fromScore(score.round()));
 
   @override
   ScoreColors copyWith({

@@ -45,3 +45,8 @@ flutter:
   assets:
     - assets/content/
     - assets/models/
+  # IPA-capable font (SIL OFL 1.1, assets/fonts/NotoSans-OFL.txt), added by U1-home.
+  fonts:
+    - family: NotoSansIPA
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf
