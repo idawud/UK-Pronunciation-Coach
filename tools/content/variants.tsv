@@ -1,0 +1,28 @@
+# Preferred Britfone variant (1-based, Britfone's numbering) for words whose first
+# variant is not the one passages should expect. Read by tools/content/lexicon.py and
+# baked into assets/content/britfone.v1.tsv (preferred variant first), so the app's
+# lookup() uses the same choice.
+#
+# Weak forms stay the default for most function words (a, an, and, at, can, for, of,
+# the, to, was, ...); these are exceptions where the weak form is often wrong (lexical
+# "have", demonstrative "that") or very reduced for learners.
+you       3   # j uː: weak "jə" is too reduced to score fairly
+your      3   # j ɔː: modern SSBE
+him       2   # h ɪ m: keep the h
+have      2   # lexical "have" is common; strong form is never wrong
+has       2
+had       2
+that      2   # demonstrative "that" is strong
+isn't     2   # negative contractions are stressed
+use       2   # verb (j uː z); noun uses were reworded in the passages
+close     2   # verb (k l əʊ z)
+separate  3   # verb (s ɛ p ə ɹ eɪ t)
+just      2   # strong form: "just" is often stressed
+sometimes 2   # s ʌ m t aɪ m z
+contact   2   # British verb and noun: k ɒ n t æ k t
+contract  2   # noun
+content   2   # noun
+survey    2   # noun
+surveys   2
+subjects  2   # noun
+transport 2   # noun
