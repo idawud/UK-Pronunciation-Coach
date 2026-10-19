@@ -1,0 +1,5 @@
+# Model binaries, scratch exports and downloaded speech data: never committed.
+# Model files are published as GitHub Release assets (see docs/models.md).
+release/
+work/
+data/
