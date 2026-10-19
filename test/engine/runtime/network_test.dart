@@ -1,12 +1,7 @@
-import 'dart:async';
 import 'dart:io';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:uk_pronunciation_coach/engine/runtime/network.dart';
-
-class _MockConnectivity extends Mock implements Connectivity {}
 
 void main() {
   group('HttpModelTransport (loopback server, no network)', () {
@@ -82,34 +77,127 @@ void main() {
     expect(await n.unmeteredChanges.isEmpty, isTrue);
   });
 
-  group('ConnectivityNetworkMonitor', () {
-    test('Wi-Fi and Ethernet are unmetered; mobile and none are not', () {
-      bool u(List<ConnectivityResult> r) =>
-          ConnectivityNetworkMonitor.unmetered(r);
-      expect(u([ConnectivityResult.wifi]), isTrue);
+  group('InterfaceNetworkMonitor', () {
+    NetworkInterface nic(String name, List<String> addresses) =>
+        _Nic(name, [for (final a in addresses) _Addr(InternetAddress(a))]);
+
+    test('Wi-Fi and Ethernet with an address are unmetered', () {
+      bool u(List<NetworkInterface> l) => InterfaceNetworkMonitor.unmetered(l);
       expect(
-        u([ConnectivityResult.mobile, ConnectivityResult.ethernet]),
+        u([
+          nic('wlan0', ['192.168.1.20']),
+        ]),
+        isTrue,
+      ); // Android
+      expect(
+        u([
+          nic('en0', ['fd00::1']),
+        ]),
+        isTrue,
+      ); // iOS
+      expect(
+        u([
+          nic('eth0', ['10.0.0.2']),
+        ]),
         isTrue,
       );
-      expect(u([ConnectivityResult.mobile]), isFalse);
-      expect(u([ConnectivityResult.vpn]), isFalse);
-      expect(u([ConnectivityResult.none]), isFalse);
+      expect(
+        u([
+          nic('wlp2s0', ['10.0.0.2']),
+        ]),
+        isTrue,
+      ); // Linux
+      expect(
+        u([
+          nic('rmnet_data0', ['10.1.1.1']),
+        ]),
+        isFalse,
+      ); // cellular
+      expect(
+        u([
+          nic('pdp_ip0', ['10.1.1.1']),
+        ]),
+        isFalse,
+      ); // iOS cellular
+      expect(
+        u([
+          nic('tun0', ['10.8.0.1']),
+        ]),
+        isFalse,
+      ); // VPN
+      expect(
+        u([
+          nic('lo', ['127.0.0.1']),
+        ]),
+        isFalse,
+      );
+      expect(
+        u([
+          nic('wlan0', ['fe80::1']),
+        ]),
+        isFalse,
+        reason: 'link-local',
+      );
+      expect(u([nic('wlan0', [])]), isFalse);
+      expect(u([]), isFalse);
     });
 
-    test('reads and watches the plug-in', () async {
-      final c = _MockConnectivity();
-      final changes = StreamController<List<ConnectivityResult>>();
-      when(c.checkConnectivity)
-          .thenAnswer((_) async => [ConnectivityResult.mobile]);
-      when(() => c.onConnectivityChanged).thenAnswer((_) => changes.stream);
-      final m = ConnectivityNetworkMonitor(connectivity: c);
-      expect(await m.isUnmetered(), isFalse);
-      final seen = m.unmeteredChanges.take(2).toList();
-      changes
-        ..add([ConnectivityResult.wifi])
-        ..add([ConnectivityResult.none]);
-      expect(await seen, [true, false]);
-      await changes.close();
+    test('reads the OS interfaces', () async {
+      final m = InterfaceNetworkMonitor();
+      expect(await m.isUnmetered(), isA<bool>());
+    });
+
+    test('lister errors mean metered; changes are polled', () async {
+      var calls = 0;
+      final answers = <List<NetworkInterface>>[
+        [
+          nic('rmnet0', ['10.1.1.1']),
+        ],
+        [
+          nic('rmnet0', ['10.1.1.1']),
+        ],
+        [
+          nic('wlan0', ['192.168.1.2']),
+        ],
+        [],
+      ];
+      final m = InterfaceNetworkMonitor(
+        lister: () async => answers[calls++ % answers.length],
+        interval: const Duration(milliseconds: 1),
+      );
+      expect(await m.unmeteredChanges.take(3).toList(), [false, true, false]);
+      final failing = InterfaceNetworkMonitor(
+        lister: () async => throw const SocketException('no interfaces'),
+      );
+      expect(await failing.isUnmetered(), isFalse);
     });
   });
+}
+
+class _Nic implements NetworkInterface {
+  _Nic(this.name, this.addresses);
+
+  @override
+  final String name;
+
+  @override
+  final List<InterfaceAddress> addresses;
+
+  @override
+  int get index => 0;
+}
+
+class _Addr implements InterfaceAddress {
+  _Addr(this._a);
+
+  final InternetAddress _a;
+
+  @override
+  bool get isLoopback => _a.isLoopback;
+
+  @override
+  bool get isLinkLocal => _a.isLinkLocal;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
