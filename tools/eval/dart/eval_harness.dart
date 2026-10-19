@@ -106,7 +106,7 @@ Duration wavDuration(Uint8List bytes) {
   while (pos + 8 <= bytes.length) {
     final id = String.fromCharCodes(bytes.sublist(pos, pos + 4));
     final size = data.getUint32(pos + 4, Endian.little);
-    if (id == 'fmt ') byteRate = data.getUint32(pos + 12, Endian.little);
+    if (id == 'fmt ') byteRate = data.getUint32(pos + 16, Endian.little);
     if (id == 'data') {
       final n = size.clamp(0, bytes.length - pos - 8);
       return Duration(microseconds: n * 1000000 ~/ byteRate);
