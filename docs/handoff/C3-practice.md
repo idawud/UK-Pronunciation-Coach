@@ -84,7 +84,12 @@ repository on first use.
   points), weak-sound weighting, and no repeats over 500 consecutive picks.
 
 Coverage of `lib/practice/`: 263 of 264 lines (the one line missed is unreachable).
-`scripts/check.sh` passes.
+`scripts/check.sh`: format, analyze, all 449 Dart tests, the coverage gate, ruff, the
+content check and the licence check pass. The pytest step fails only at collection of
+A4's `tools/models/tests` (needs `soundfile` / `torch` from `tools/models/requirements.txt`,
+not installed on this shared machine). `pytest tools --ignore=tools/models` passes
+(29 tests). A3's 200-word benchmark (< 100 ms) failed once under machine load and
+passed on the rerun.
 
 ## Contract requests
 
