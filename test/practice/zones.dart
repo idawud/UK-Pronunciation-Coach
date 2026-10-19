@@ -23,3 +23,17 @@ DateTime europeLondon(DateTime instant) {
 /// A fixed-offset zone (no daylight saving), e.g. UTC-5 for New York in winter.
 WallClock fixedOffset(Duration offset) =>
     (instant) => instant.toUtc().add(offset);
+
+/// The UTC instant at which London wall clocks show [wall]'s fields (for the hour
+/// skipped or repeated at a clock change, the earlier reading).
+DateTime londonInstant(DateTime wall) {
+  final asUtc = DateTime.utc(
+    wall.year,
+    wall.month,
+    wall.day,
+    wall.hour,
+    wall.minute,
+    wall.second,
+  );
+  return asUtc.subtract(europeLondon(asUtc).difference(asUtc));
+}
