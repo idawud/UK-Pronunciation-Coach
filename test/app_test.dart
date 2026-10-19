@@ -2,11 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uk_pronunciation_coach/app.dart';
+import 'package:uk_pronunciation_coach/core/fakes/fakes.dart';
+import 'package:uk_pronunciation_coach/core/models/models.dart';
+import 'package:uk_pronunciation_coach/core/providers.dart';
 import 'package:uk_pronunciation_coach/main.dart' as app;
 
 void main() {
-  testWidgets('app starts on the placeholder home screen', (tester) async {
+  testWidgets('app starts on onboarding on first run', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: CoachApp()));
+    await tester.pumpAndSettle();
+    expect(find.text('Get started'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+  });
+
+  testWidgets('app starts on home once onboarding is done', (tester) async {
+    final progress = FakeProgressRepository();
+    await progress.saveProfile(const UserProfile(onboardingDone: true));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [progressRepositoryProvider.overrideWithValue(progress)],
+        child: const CoachApp(),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('UK Pronunciation Coach'), findsOneWidget);
     expect(find.text("Start today's passage"), findsOneWidget);
