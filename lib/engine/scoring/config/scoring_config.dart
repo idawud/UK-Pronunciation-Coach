@@ -49,7 +49,9 @@ class PiecewiseLinear {
 
 /// Every tunable number the scorer uses. Log values are natural logs.
 class ScoringConfig {
-  /// Creates a config; the defaults are A3's initial guesses (I2 tunes them).
+  /// Creates a config. Defaults: I2-eval's engine-spike calibration (see
+  /// docs/eval-report.md) on the full-tier model; A3's original guesses are kept
+  /// as [a3Calibration]. The thresholds stay at the UI's 80 / 60.
   const ScoringConfig({
     this.calibration = defaultCalibration,
     this.goodThreshold = 80,
@@ -58,9 +60,9 @@ class ScoringConfig {
     this.heardMargin = 0,
     this.skipWordPenalty = 5,
     this.missedSpeechThreshold = 0.3,
-    this.wordMaxAboveWorst = 50,
-    this.droppedScore = 0,
-    this.intrusiveRScore = 45,
+    this.wordMaxAboveWorst = 40,
+    this.droppedScore = 60,
+    this.intrusiveRScore = 80,
     this.intrusiveRWindowFrames = 10,
     this.speechFrameMinProb = 0.5,
     this.extraWordMinPhones = 2,
@@ -77,7 +79,7 @@ class ScoringConfig {
     this.rateWeight = 0.4,
     this.pauseWeight = 0.3,
     this.continuityWeight = 0.3,
-    this.extraAccepted = const {},
+    this.extraAccepted = defaultExtraAccepted,
   });
 
   /// Decodes a config; missing keys keep their defaults.
@@ -140,9 +142,24 @@ class ScoringConfig {
     );
   }
 
-  /// Initial guess: GOP margin (expected minus best competitor, mean log-posterior
-  /// over the phoneme's frames, renormalised without the blank) -> 0-100.
+  /// GOP margin (expected minus best competitor, mean log-posterior over the
+  /// phoneme's frames) -> 0-100. I2-eval: A3's curve moved 2 nats more lenient,
+  /// tuned on 3 native Southern English VCTK speakers to < 3.5% false red words
+  /// (3.7% on 2 held-out speakers) with 89% of controlled errors still red.
   static const PiecewiseLinear defaultCalibration = PiecewiseLinear([
+    (-6.8, 0),
+    (-4.4, 10),
+    (-2.8, 30),
+    (-2, 50),
+    (-1.2, 65),
+    (-0.4, 78),
+    (0.4, 86),
+    (2, 95),
+    (4.4, 100),
+  ]);
+
+  /// A3's initial curve (before I2-eval's calibration), for comparison.
+  static const PiecewiseLinear a3Calibration = PiecewiseLinear([
     (-6, 0),
     (-3, 10),
     (-1, 30),
@@ -153,6 +170,26 @@ class ScoringConfig {
     (5, 95),
     (8, 100),
   ]);
+
+  /// Model symbols accepted for British phonemes on top of the built-in table
+  /// (I2-eval). The full-tier model was trained on eSpeak en-us labels, so it labels
+  /// native Southern British speech with American symbols: STRUT `ʌ`, LOT `ɑː`,
+  /// NURSE `ɚ`, r-coloured vowels for spelled r (`ɔːɹ`, `ɑːɹ`, `ɛɹ`, `ɪɹ`, `ʊɹ`),
+  /// flapped `ɾ` for t, and strong vowels where Britfone has weak forms (`ə` in
+  /// "of", "was", "that", "and"). Without these, 29% of native words came out red.
+  /// SQUARE also accepts the modern monophthong `ɛː`.
+  static const Map<String, List<String>> defaultExtraAccepted = {
+    'ɐ': ['ʌ'],
+    'ə': ['ʌ', 'ɚ', 'æ'],
+    'ɒ': ['ɑː', 'ɑ'],
+    'ɜː': ['ɚ', 'ɝ', 'ɜ'],
+    'ɛə': ['ɛ', 'ɛː', 'ɛɹ'],
+    'ɪə': ['ɪɹ', 'ɪ', 'ɪː'],
+    'ɔː': ['ɔːɹ', 'oːɹ'],
+    'ɑː': ['ɑːɹ'],
+    'ʊə': ['ʊɹ', 'ɔː', 'ɔːɹ'],
+    't': ['ɾ'],
+  };
 
   /// Speaking rate (words per minute) -> 0-100; 130-170 wpm is the target.
   static const PiecewiseLinear defaultRateCurve = PiecewiseLinear([

@@ -57,7 +57,8 @@ void main() {
       }
       expect(d.phonemeScore(-10), 0);
       expect(d.phonemeScore(10), 100);
-      expect(d.phonemeScore(0), 50);
+      expect(d.phonemeScore(-2), 50); // I2-eval: 2 nats more lenient than A3
+      expect(ScoringConfig.a3Calibration(0), 50);
     });
 
     test('round-trips through JSON', () {
