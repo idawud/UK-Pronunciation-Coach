@@ -90,3 +90,6 @@ def test_summary_and_cli(tmp_path, capsys):
     assert an.main([str(run), "--json", str(out)]) == 0
     assert json.loads(out.read_text())["native"]["all"]["words"] == 5
     assert "weak phonemes" in capsys.readouterr().out
+    assert an.main([str(run), "--max-red", "0.5"]) == 0
+    assert an.main([str(run), "--max-red", "0.05"]) == 1
+    assert "FAIL" in capsys.readouterr().out

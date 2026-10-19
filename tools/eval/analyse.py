@@ -232,6 +232,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("run_dir", type=Path)
     ap.add_argument("--config", default="default")
     ap.add_argument("--json", type=Path, help="also write the summary as JSON")
+    ap.add_argument("--max-red", type=float, help="exit 1 when native false red >= this")
     args = ap.parse_args(argv)
     words = read_csv(args.run_dir / f"words_{args.config}.csv")
     clips_path = args.run_dir / f"clips_{args.config}.csv"
@@ -240,6 +241,10 @@ def main(argv: list[str] | None = None) -> int:
     print(format_summary(s))
     if args.json:
         args.json.write_text(json.dumps(s, ensure_ascii=False, indent=1), encoding="utf-8")
+    red = s["native"]["all"]["red"]
+    if args.max_red is not None and red >= args.max_red:
+        print(f"FAIL: native false red {pct(red)} >= {pct(args.max_red)}")
+        return 1
     return 0
 
 
