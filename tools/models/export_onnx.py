@@ -34,6 +34,9 @@ OUTPUT = "logits"
 # model, which the light tier needs to stay under 100 MB.
 QUANT_OPS = ("MatMul", "Gemm")
 QUANT_OPS_WITH_CONV = ("MatMul", "Gemm", "Conv")
+# uint8 weights (QUInt8), as A2-runtime asked: ONNX Runtime's CPU ConvInteger kernel only
+# takes uint8 weights, and a uint8 file loads on every runtime A2 targets.
+WEIGHT_TYPE = QuantType.QUInt8
 
 
 class LogitsOnly(torch.nn.Module):
@@ -87,14 +90,20 @@ def export_fp32(model: torch.nn.Module, path: Path, opset: int = OPSET, seconds:
     return path
 
 
-def quantize_int8(fp32_path: Path, int8_path: Path, ops: tuple[str, ...] = QUANT_OPS) -> Path:
-    """Dynamic int8 quantisation of [ops] (weights int8, activations quantised at run time)."""
+def quantize_int8(
+    fp32_path: Path,
+    int8_path: Path,
+    ops: tuple[str, ...] = QUANT_OPS,
+    weight_type: QuantType = WEIGHT_TYPE,
+) -> Path:
+    """Dynamic 8-bit quantisation of [ops]: weights stored as 8-bit integers (uint8 by
+    default), activations quantised at run time."""
     int8_path.parent.mkdir(parents=True, exist_ok=True)
     quantize_dynamic(
         model_input=str(fp32_path),
         model_output=str(int8_path),
         op_types_to_quantize=list(ops),
-        weight_type=QuantType.QInt8,
+        weight_type=weight_type,
         per_channel=False,
     )
     onnx.checker.check_model(str(int8_path))
@@ -155,6 +164,7 @@ def export_tier(
         "quantise_seconds": round(t2 - t1, 1),
         "opset": onnx_opset(int8),
         "quant_ops": list(quant_ops),
+        "weight_type": "uint8",
         "vocab_size": len(vocab),
         "blank_index": vocab["<pad>"],
     }

@@ -8,10 +8,13 @@ A release folder looks like this (never committed; `tools/models/release/` is gi
       manifest.json     SHA256SUMS
 
 `manifest.json` uses the format `tools/ci/fetch_models.py` reads (A2 copies it to
-`assets/models/manifest.json` once the release is published):
+`assets/models/manifest.json` once the release is published). `name` is flat (Flutter does
+not bundle subfolders of assets/models/) and equals the release asset name; `path` is the
+file's place in the release folder:
 
     {"release": "models-v1",
-     "files": [{"name": "full/model.onnx", "tier": "full", "asset": "full-model.onnx",
+     "files": [{"name": "full-model.onnx", "path": "full/model.onnx", "tier": "full",
+                "asset": "full-model.onnx",
                 "url": "https://github.com/<owner>/<repo>/releases/download/models-v1/full-model.onnx",
                 "sha256": "<64 hex>", "size": 123, "bundle": false}, ...]}
 
@@ -60,11 +63,12 @@ def build_manifest(
             path = tier_dir / fname
             if not path.exists():
                 continue
-            name = f"{tier_dir.name}/{fname}"
-            asset = asset_name(name)
+            rel = f"{tier_dir.name}/{fname}"
+            asset = asset_name(rel)
             files.append(
                 {
-                    "name": name,
+                    "name": asset,
+                    "path": rel,
                     "tier": tier_dir.name,
                     "asset": asset,
                     "url": URL_PLACEHOLDER.format(repo=repo, tag=tag, asset=asset),
@@ -96,7 +100,7 @@ def verify_manifest(release_dir: Path) -> list[str]:
     manifest = json.loads((release_dir / "manifest.json").read_text(encoding="utf-8"))
     problems = []
     for entry in manifest["files"]:
-        path = release_dir / entry["name"]
+        path = release_dir / entry["path"]
         if not path.exists():
             problems.append(f"{entry['name']}: missing")
             continue

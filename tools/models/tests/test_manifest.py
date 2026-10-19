@@ -17,7 +17,8 @@ def test_build_manifest_lists_every_file(tmp_path):
     release = make_release(tmp_path / "release")
     manifest = mf.build_manifest(release, tag="models-v9", repo="me/coach")
     names = [f["name"] for f in manifest["files"]]
-    assert names == ["full/model.onnx", "full/vocab.json", "light/model.onnx", "light/vocab.json"]
+    assert names == ["full-model.onnx", "full-vocab.json", "light-model.onnx", "light-vocab.json"]
+    assert [f["path"] for f in manifest["files"]][0] == "full/model.onnx"
     full = manifest["files"][0]
     assert full["sha256"] == mf.sha256_of(release / "full" / "model.onnx")
     assert full["size"] == len(b"full-model")
@@ -44,9 +45,9 @@ def test_verify_detects_tampering_and_missing_files(tmp_path):
     (release / "light" / "vocab.json").write_text("{}", encoding="utf-8")
     (release / "light" / "model.onnx").unlink()
     problems = mf.verify_manifest(release)
-    assert any(p.startswith("full/model.onnx: sha256") for p in problems)
-    assert "light/model.onnx: missing" in problems
-    assert any(p.startswith("light/vocab.json: size") for p in problems)
+    assert any(p.startswith("full-model.onnx: sha256") for p in problems)
+    assert "light-model.onnx: missing" in problems
+    assert any(p.startswith("light-vocab.json: size") for p in problems)
 
 
 def test_manifest_is_readable_by_ci_fetch(tmp_path):
@@ -55,13 +56,15 @@ def test_manifest_is_readable_by_ci_fetch(tmp_path):
     release = make_release(tmp_path / "release")
     manifest = mf.build_manifest(release)
     for f in manifest["files"]:
-        f["url"] = (release / f["name"]).as_uri()
+        f["url"] = (release / f["path"]).as_uri()
     target = tmp_path / "repo" / "assets" / "models" / "manifest.json"
     target.parent.mkdir(parents=True)
     target.write_text(json.dumps(manifest), encoding="utf-8")
     cached = fetch_models.fetch(tmp_path / "repo", tmp_path / "cache")
     assert len(cached) == 4
-    assert (tmp_path / "repo" / "assets" / "models" / "light" / "model.onnx").exists()
+    bundled = tmp_path / "repo" / "assets" / "models"
+    assert (bundled / "light-model.onnx").exists() and (bundled / "light-vocab.json").exists()
+    assert not (bundled / "full-model.onnx").exists()
 
 
 def test_empty_release_dir_raises(tmp_path):
