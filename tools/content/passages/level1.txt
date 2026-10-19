@@ -1,0 +1,83 @@
+# Level 1: one sentence, 8-12 words. Everyday phrases.
+# Sound focus: short vowels (ɪ ɛ æ ʌ ɒ ʊ) and clear consonants.
+# Format: see tools/content/build.py (parse_sources). Original writing, 2026.
+
+=== l1-001 | The red bus
+focus: ɛ ʌ
+The red bus stops at the end of this busy street.
+
+=== l1-002 | A cup of tea
+focus: ʌ ɪ
+Could I have a cup of tea with milk, please?
+
+=== l1-003 | Lost keys
+focus: ɪ ɛ
+I think I left my keys in the kitchen.
+
+=== l1-004 | Bad back
+focus: æ
+My dad has a bad back, so he can't run.
+
+=== l1-005 | Shopping list
+focus: ɛ æ
+We need bread, eggs and a big bag of apples.
+
+=== l1-006 | Good book
+focus: ʊ
+She put the good book back on the wooden shelf.
+
+=== l1-007 | Wet dog
+focus: ɛ ɒ
+The wet dog jumped into the pond and swam off.
+
+=== l1-008 | Sunday lunch
+focus: ʌ
+My mum cooks a lovely lunch for us on Sundays.
+
+=== l1-009 | Thick jumper
+focus: ʌ ɪ
+It is cold, so pack a thick jumper and a hat.
+
+=== l1-010 | Quick question
+focus: ɪ ɛ
+Can I ask you a quick question about the test?
+
+=== l1-011 | Black cat
+focus: æ
+A black cat sat on the mat and had a nap.
+
+=== l1-012 | Next stop
+focus: ɛ ɒ
+Please get off the train at the next stop.
+
+=== l1-013 | Hot dog
+focus: ɒ
+Tom got a hot dog and a box of chips.
+
+=== l1-014 | Lunch box
+focus: ʌ ɒ
+Did you remember to bring your lunch box from the van?
+
+=== l1-015 | Football
+focus: ʊ ɪ
+The children kicked the football up the hill.
+
+=== l1-016 | Wrong bag
+focus: ɒ æ
+Sorry, I think you have picked up the wrong bag.
+
+=== l1-017 | Little shop
+focus: ɪ ɒ
+There is a little shop just round the corner.
+
+=== l1-018 | Rest
+focus: ɛ
+Let's sit on this bench and rest for ten minutes.
+
+=== l1-019 | Pens and pencils
+focus: ɛ ɪ
+Ben lent his friend six pens and a pencil.
+
+=== l1-020 | Muddy boots
+focus: ʌ ʊ
+Put your muddy boots by the back door, not on the rug.

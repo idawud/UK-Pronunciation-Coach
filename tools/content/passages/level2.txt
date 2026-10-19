@@ -1,0 +1,83 @@
+# Level 2: 2-3 sentences, about 30 words. Daily routines.
+# Sound focus: /θ/ and /ð/ (think, this) and word endings (-s, -ed, final clusters).
+# Original writing, 2026.
+
+=== l2-001 | Morning routine
+focus: θ ð
+I wake up at seven thirty every Thursday. Then I brush my teeth, have a bath and think about the things I need to do that day.
+
+=== l2-002 | The school run
+focus: ð z
+My brother walks the twins to school on weekdays. They always ask for sweets on the way. He says no, but they still ask every morning.
+
+=== l2-003 | Breakfast together
+focus: θ ð
+Both of my children like toast with jam. My husband prefers porridge with honey. I only drink coffee, because I rarely feel hungry before nine o'clock.
+
+=== l2-004 | Catching the train
+focus: θ d
+I missed the train this morning, so I waited thirty minutes for the next one. I finally arrived at the office and thanked my boss for waiting.
+
+=== l2-005 | Washing up
+focus: ð ʃ
+After dinner, my father washes the dishes and my mother dries them. I put them back in the cupboards. Then we all sit together and watch the news.
+
+=== l2-006 | Gym on Thursdays
+focus: θ
+On Thursdays I go to the gym with three friends. We stretch, lift weights and run on the machines. Afterwards we feel tired but healthy.
+
+=== l2-007 | Weekly shop
+focus: ð s
+On Saturdays we do the weekly shop. We buy fruit, vegetables, cheese and cereal. My daughter always asks for crisps, and sometimes I let her choose them.
+
+=== l2-008 | Walking the dog
+focus: ð
+Every evening I walk the dog along the path by the river. She sniffs the grass and chases the birds. Then we both head home for supper.
+
+=== l2-009 | Working from home
+focus: θ ð
+On Mondays I work from home. I check my emails, join three short meetings and then think through the month ahead. It is quieter than the office.
+
+=== l2-010 | Laundry day
+focus: ð z
+Sunday is laundry day in our flat. We sort the clothes, wash the towels and hang the shirts by the window. By the evening everything smells fresh.
+
+=== l2-011 | The birthday card
+focus: θ
+It was my mother's birthday on the thirteenth. I wrote a thoughtful card, wrapped a small gift and posted both of them on Thursday morning.
+
+=== l2-012 | Bedtime
+focus: ð
+At bedtime, my son chooses a book and climbs into bed. I read three or four pages. He usually falls asleep before the end of the story.
+
+=== l2-013 | Packed lunches
+focus: θ ð
+Every night I make packed lunches for the next day. There are sandwiches, apples and something sweet. My youngest says that the crusts taste strange, so I cut them off.
+
+=== l2-014 | The commute
+focus: ð t
+My commute takes forty minutes. I cycle to the station, lock my bike and catch the fast train. On the way, I listen to podcasts or the radio.
+
+=== l2-015 | Feeding the birds
+focus: θ ð
+My grandfather feeds the birds in his garden each morning. He throws seeds on the path and fills the feeder. He says that thrushes are his favourites.
+
+=== l2-016 | Tidying the kitchen
+focus: ð
+Before breakfast, I clear the table and wipe the surfaces. Then I empty the dishwasher, sweep the floor and take out the rubbish. It only takes ten minutes.
+
+=== l2-017 | Evening class
+focus: ð
+Every Wednesday evening I attend a Spanish class at the local college. We practise verbs, learn new words and chat with each other. It's hard, but I enjoy it.
+
+=== l2-018 | Lunch break
+focus: θ
+At lunchtime I leave my desk and walk around the park. I eat my sandwiches on a bench and think about anything except work. It helps me relax.
+
+=== l2-019 | Saturday chores
+focus: ð z
+On Saturday mornings my sisters and I share the chores. One of us cleans the bathroom, another hoovers the stairs and the third changes the beds.
+
+=== l2-020 | Running late
+focus: θ ð
+I overslept this morning, so I rushed through everything. I skipped breakfast, grabbed my things and jumped on the bus. Thankfully, I arrived just in time.

@@ -1,0 +1,83 @@
+# Level 3: one paragraph, about 60 words. Short stories and emails.
+# Sound focus: long vowels (bath, car, thought: ɑː ɔː iː uː ɜː) and no /r/ after vowels.
+# Original writing, 2026.
+
+=== l3-001 | A walk in the park
+focus: ɑː ɔː
+Last March, Martha took her dog for a long walk in the park. The grass was wet and the sky was dark, but they walked for hours. They passed a small farm, a stone bridge and a garden full of roses. When they got home, Martha ran a warm bath and made a large pot of tea.
+
+=== l3-002 | Email to a landlord
+focus: ɔː ɑː
+Dear Mark, I'm writing about the flat on Church Road. The heating in the bedroom has stopped working, and the bathroom door won't close properly. Could you send someone to look at them before the weekend? I'm usually at home after four o'clock. I'd be grateful for a quick answer. Many thanks, Laura.
+
+=== l3-003 | The lost scarf
+focus: ɑː ɜː
+On her first day at work, Kirsty lost her favourite scarf. She searched the car park, the corridor and the staff room, but it wasn't there. Later that afternoon, a porter knocked on her door. He was holding the scarf and smiling. He had found it under a chair in the waiting area.
+
+=== l3-004 | Booking a table
+focus: ɔː uː
+Hi Paula, could you book a table for four on Thursday evening? Somewhere near the harbour would be perfect, if possible. Tom prefers seafood, but I'm happy with anything. I should finish work at about half past six, so let's say seven. Call me if there's a problem. See you soon, George.
+
+=== l3-005 | The market
+focus: ɑː ɔː
+Every Saturday morning, the market in our town is crowded. Farmers sell carrots, cheese and fresh bread from their carts. There's a stall with hot chestnuts and another with handmade cards. My daughter always wants to stop at the flower stall, and she normally talks me into buying a bunch of daffodils for our hall.
+
+=== l3-006 | First driving lesson
+focus: ɜː ɑː
+My first driving lesson was a disaster. I turned left instead of right, forgot to start the car properly and nearly hit a parked van. My teacher stayed calm and smiled the whole time. By the end of the hour, I could start, steer and stop. I'm learning again next Thursday afternoon.
+
+=== l3-007 | An apology
+focus: ɔː ɜː
+Dear Mrs Morgan, I'm sorry I missed our meeting this morning. My train was cancelled because of a fault, and the next one was nearly an hour late. I should have called you earlier, and I apologise for that. Are you free on Thursday or Friday afternoon instead? I can come to your office at any time. Best wishes, Sean.
+
+=== l3-008 | The surprise party
+focus: ɑː ɜː
+For her fortieth birthday, we planned a surprise party for Charlotte. We hid in the dark garden and waited quietly. When she opened the gate, everyone shouted and the lights came on. She laughed so hard that she nearly cried. Later, we danced on the lawn until after midnight, and nobody wanted to go home.
+
+=== l3-009 | Caught in the storm
+focus: ɔː ɑː
+We were halfway up the mountain when the storm started. The wind roared, the rain poured down and the path turned to mud. We sheltered behind a large rock and waited. After an hour, the sky cleared, and we saw the whole valley below us. It was worth the walk, but we were soaked.
+
+=== l3-010 | A note to a neighbour
+focus: ɑː ɔː
+Hello, I'm Clare from number fourteen. I'll be away for the next four weeks, starting on Tuesday. Would you mind watering the plants in my front garden twice a week? The spare key is with the porter downstairs. I'll bring you back something nice from my trip. Thank you so much, and see you in March.
+
+=== l3-011 | The art class
+focus: ɑː ɜː
+On Thursday nights, Arthur goes to an art class in the old church hall. The teacher, a cheerful woman called Pearl, shows them how to draw faces and hands. Arthur's first portrait looked rather strange, but his work is getting better. Last week he painted a large picture of his garden, and everyone admired it.
+
+=== l3-012 | Lost at the airport
+focus: ɔː ɜː
+When I landed in Bristol, my suitcase didn't arrive. I waited at the carousel for nearly an hour, but it never appeared. Finally, I reported it at the desk, and a kind woman wrote down my address. Two days later, a courier brought it to my door. Nothing was missing, though my shirts were badly creased.
+
+=== l3-013 | The new job
+focus: uː ɜː
+Dear Grandma, I started my new job on Monday. The office is in a tall glass tower near the river, and I can see the bridge from my desk. My colleagues are friendly, and my boss seems fair. The work is hard, but I'm learning fast. I'll call you on Sunday afternoon and tell you more. Lots of love, June.
+
+=== l3-014 | Borrowing the car
+focus: ɑː ɔː
+Hi Bart, could I borrow your car this Saturday? I need to take some boxes to my sister's new flat, and they're far too large for the bus. I'll fill the tank and park it outside your door by four. If it's a problem, just tell me and I'll ask somebody else. Thanks a lot, Carl.
+
+=== l3-015 | The fox in the yard
+focus: ɔː ɑː
+Late one night, I heard a strange noise in the back yard. I looked out of the window and saw a fox in the moonlight. It was ripping open a rubbish bag and searching for scraps. When I opened the door, it stared at me for a moment, then jumped over the wall and disappeared into the dark.
+
+=== l3-016 | A thank-you email
+focus: ɑː ɜː
+Dear Martin, thank you for the wonderful dinner on Saturday. The food was perfect, and your garden looked beautiful under the stars. I especially loved the lemon tart; you must send me the recipe. It was lovely to meet your daughter at last, too. We'd love to have you both round to ours next month. Warm regards, Barbara.
+
+=== l3-017 | The early bird
+focus: ɜː ɔː
+My neighbour Bernard gets up before dawn every morning. By half past five, he's already out in the garden with a cup of coffee, feeding the birds. He says that the early hours are the calmest part of the day. I've tried it a few times, but I always end up falling asleep on the sofa by lunch.
+
+=== l3-018 | Return to sender
+focus: ɜː uː
+Hello, I'm returning the shoes I ordered last Tuesday. They're far too small, and the colour is darker than in the photo. I've put them back in the box with the receipt and the form. Please could you send me a larger pair? If you don't have one, I'd prefer a full refund. Kind regards, Ruth.
+
+=== l3-019 | A day at the seaside
+focus: ɑː iː
+In August, we drove to the seaside for the day. The beach was packed, so we walked along the harbour wall to a quieter part. The children built a sandcastle and searched the rocks for crabs. We bought chips and sat on the warm sand, watching the boats. By dark, everyone was sunburnt but happy.
+
+=== l3-020 | The broken heater
+focus: ɔː ɑː
+It was the coldest morning of the year, and the heater in our office broke. By nine o'clock, everyone was wearing coats, scarves and gloves at their desks. Our manager ordered a large pot of soup for lunch and promised that the engineer would arrive before four. He finally turned up at half past, and we all cheered.

@@ -1,0 +1,15 @@
+# Placement test: one passage each from levels 1, 3 and 5, in that order.
+# Not part of the library (ContentRepository.all() excludes them; byId() finds them).
+# Original writing, 2026.
+
+=== placement-l1 | A sunny morning
+focus: ʌ ɪ ɒ
+The sun is up, so let's go for a quick jog.
+
+=== placement-l3 | Dear Sarah
+focus: ɑː ɔː ɜː
+Dear Sarah, thank you for the lovely card and the scarf you sent for my birthday. It was such a surprise. We had a quiet party in the garden, and my daughter baked a large chocolate cake. The weather was warm, so we stayed outside until it got dark. I hope we can meet in March when you're back from abroad. Love, Martha.
+
+=== placement-l5 | Why breakfast matters
+focus: linking
+Many of us skip breakfast because we're in a hurry, but I'd argue that it's the one meal we really shouldn't miss. After a long night without food, our bodies need energy to start the day. People who eat a good breakfast often find it easier to concentrate at work or school, and they're less likely to reach for unhealthy snacks later in the morning. It doesn't have to take long. A bowl of porridge, a piece of fruit or a slice of toast with an egg can all be prepared in a few minutes. If you really can't face food early in the day, try making something the night before and taking it with you. Overnight oats, for example, can be eaten on the train or at your desk. Small changes like this are easy to make, and after a week or two, you may notice that you feel more alert and less tired in the afternoons.
