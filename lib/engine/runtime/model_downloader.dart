@@ -158,13 +158,17 @@ class FullModelDownloader {
   /// Downloads whatever is missing; see `PhonemeRecognizer.downloadFullModel`.
   /// Concurrent calls share one download.
   Future<void> download({bool requireWifi = true}) {
-    return _running ??= _download(requireWifi).whenComplete(() {
+    final running = _running;
+    if (running != null) return running;
+    // Created up front so a cancel() straight after download() is never lost.
+    final cancel = _cancel = Completer<void>();
+    return _running = _download(requireWifi, cancel).whenComplete(() {
       _running = null;
       _cancel = null;
     });
   }
 
-  Future<void> _download(bool requireWifi) async {
+  Future<void> _download(bool requireWifi, Completer<void> cancel) async {
     if (files.isEmpty) {
       _fail('No full model is listed in the model manifest');
     }
@@ -172,7 +176,7 @@ class FullModelDownloader {
       if (_status.state != DownloadState.completed) _emit(_completed());
       return;
     }
-    final cancel = _cancel = Completer<void>();
+    if (cancel.isCompleted) _cancelled(bytesOnDisk());
     await dir.create(recursive: true);
     var received = bytesOnDisk();
     while (true) {

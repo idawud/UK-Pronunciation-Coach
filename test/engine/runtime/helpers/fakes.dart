@@ -147,3 +147,19 @@ class FakeDeviceInfo implements DeviceInfoSource {
     return snapshot;
   }
 }
+
+/// Waits (real time, up to [timeout]) until [state] reads [want]. File I/O in the
+/// code under test is truly asynchronous, so `pumpEventQueue` alone is not enough.
+Future<void> waitForState(
+  DownloadState Function() state,
+  DownloadState want, {
+  Duration timeout = const Duration(seconds: 10),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (state() != want) {
+    if (DateTime.now().isAfter(deadline)) {
+      throw TimeoutException('state is ${state()}, wanted $want');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 2));
+  }
+}

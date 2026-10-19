@@ -135,8 +135,10 @@ void main() {
     final r = make(network: FakeNetwork(unmetered: false));
     addTearDown(r.dispose);
     final running = r.downloadFullModel();
-    await pumpEventQueue();
-    expect(r.downloadStatus.state, DownloadState.waitingForWifi);
+    await waitForState(
+      () => r.downloadStatus.state,
+      DownloadState.waitingForWifi,
+    );
     final failed = expectLater(running, throwsA(isA<ModelDownloadException>()));
     await r.cancelDownload();
     await failed;
