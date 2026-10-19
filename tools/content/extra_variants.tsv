@@ -1,0 +1,9 @@
+# Correct SSBE forms Britfone lacks, added as non-preferred alternatives in
+# assets/content/alternatives.v1.json (never the expected form in passages).
+# Requested by I2-eval: native speakers were flagged red for these.
+# word<TAB>pronunciation (app spelling, stress on the vowel)
+from	f ɹ ə m
+our	ˈɑː
+ours	ˈɑː z
+hour	ˈɑː
+hours	ˈɑː z

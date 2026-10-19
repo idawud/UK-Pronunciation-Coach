@@ -34,6 +34,7 @@ from pathlib import Path
 
 from tools.content import espeak
 from tools.content.lexicon import (
+    PRE_VOWEL,
     Lexicon,
     is_stressed,
     norm_key,
@@ -48,6 +49,7 @@ SOURCES_DIR = HERE / "passages"
 PAIRS_SRC = HERE / "minimal_pairs.txt"
 OVERRIDES = HERE / "lexicon_overrides.tsv"
 BRITFONE_LICENSE = HERE / "britfone" / "LICENSE.txt"
+EXTRA_VARIANTS = HERE / "extra_variants.tsv"
 ASSETS = Path("assets/content")
 BUNDLE_VERSION = 1
 
@@ -390,6 +392,65 @@ def dump_bundle(passages: list[dict], placement: list[dict]) -> str:
     )
 
 
+def load_extra_variants(path: Path = EXTRA_VARIANTS) -> dict[str, list[str]]:
+    """word -> extra accepted pronunciations from extra_variants.tsv."""
+    out: dict[str, list[str]] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        word, pron = line.split("\t")
+        out.setdefault(norm_key(word), []).append(pron.strip())
+    return out
+
+
+def rule_variants(word: str, pron: str) -> list[str]:
+    """Rule-based alternatives: "-day" as /deɪ/ or /di/, "ex-" as /ɛk/ or /ɪk/."""
+    out = []
+    toks = pron.split()
+    plain = [strip_stress(t) for t in toks]
+    for suffix in (["d", "i"], ["d", "i", "z"], ["d", "eɪ"], ["d", "eɪ", "z"]):
+        n = len(suffix)
+        if word.rstrip("s").endswith("day") and plain[-n:] == suffix:
+            swapped = ["d", "eɪ" if suffix[1] == "i" else "i", *suffix[2:]]
+            out.append(" ".join(toks[:-n] + swapped))
+            break
+    if word.startswith("ex") and len(plain) > 2 and plain[1] in ("k", "ɡ"):
+        if plain[0] in ("ɪ", "ɛ") and toks[0] == plain[0]:
+            out.append(" ".join(["ɛ" if plain[0] == "ɪ" else "ɪ", *toks[1:]]))
+    return out
+
+
+def alternatives(words: set[str], lex: Lexicon, extra: dict[str, list[str]]) -> dict:
+    """word -> every accepted pronunciation (preferred first) for words with more
+    than one: Britfone's variants and weak forms, pre-vowel forms, extra_variants.tsv
+    and the "-day" / "ex-" rules."""
+    out = {}
+    for word in sorted(words):
+        prons = list(lex.base(word) or [])
+        if not prons:
+            continue
+        if word in ("the", "to"):
+            prons.append(PRE_VOWEL[word])
+        prons += extra.get(word, [])
+        for p in list(prons):
+            prons += rule_variants(word, p)
+        seen: dict[str, str] = {}
+        for p in prons:  # one entry per phoneme sequence, ignoring stress
+            seen.setdefault(" ".join(strip_stress(t) for t in p.split()), p)
+        unique = list(seen.values())
+        if len(unique) > 1:
+            out[word] = unique
+    return out
+
+
+def dump_alternatives(alts: dict) -> str:
+    body = ",\n".join(
+        f"  {json.dumps(w, ensure_ascii=False)}: {json.dumps(p, ensure_ascii=False)}"
+        for w, p in alts.items()
+    )
+    return '{\n "version": 1,\n "alternatives": {\n' + body + "\n }\n}\n"
+
+
 def dump_pairs(pairs: list[dict]) -> str:
     body = ",\n".join(
         "  " + json.dumps(p, ensure_ascii=False, separators=(",", ":")) for p in pairs
@@ -573,10 +634,13 @@ def build(
             [passage(s) for s in library], [passage(s) for s in placement]
         ),
         root / ASSETS / "minimal_pairs.json": dump_pairs(pairs),
+        root / ASSETS / "alternatives.v1.json": dump_alternatives(
+            alternatives(types, lex, load_extra_variants())
+        ),
         root / ASSETS / "britfone.v1.tsv": dump_table(lex),
         root / ASSETS / "BRITFONE_LICENSE.txt": BRITFONE_LICENSE.read_text(encoding="utf-8"),
         root / ASSETS / "SOURCES.md": dump_sources(library + placement),
-        overrides_path.parent / "review.md": dump_review(overrides, used, stats, dupes),
+        root / "tools" / "content" / "review.md": dump_review(overrides, used, stats, dupes),
     }
     for k in ("britfone", "derived", "override", "unknown", "types_override"):
         stats.setdefault(k, 0)
