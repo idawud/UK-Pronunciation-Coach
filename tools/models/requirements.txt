@@ -3,7 +3,7 @@
 # real light-tier fine-tune, install the CUDA build of the same torch version instead.
 # Licences: torch BSD-3-Clause, transformers Apache-2.0, onnx Apache-2.0,
 # onnxruntime MIT, onnxscript MIT, safetensors Apache-2.0, huggingface_hub Apache-2.0,
-# soundfile BSD-3-Clause, pyarrow Apache-2.0, scipy BSD-3-Clause, numpy BSD-3-Clause.
+# soundfile BSD-3-Clause, pyarrow Apache-2.0, numpy BSD-3-Clause.
 # Deliberately NOT used: phonemizer (GPL-3.0). eSpeak NG is called as a binary.
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.14.1+cpu
@@ -14,4 +14,3 @@ safetensors==0.8.0
 huggingface_hub==2.2.0
 soundfile==0.14.0
 pyarrow==26.0.0
-scipy==1.18.1

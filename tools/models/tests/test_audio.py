@@ -24,3 +24,16 @@ def test_load_audio_from_path_keeps_16k(tmp_path):
 def test_normalise_zero_mean_unit_variance():
     out = audio.normalise(np.array([1.0, 2.0, 3.0, 4.0]))
     assert abs(out.mean()) < 1e-6 and abs(out.std() - 1) < 1e-3
+
+
+def test_resample_keeps_tones_and_removes_aliases():
+    for sr in (48000, 22050, 8000):
+        t = np.arange(sr) / sr
+        out = audio.resample(np.sin(2 * np.pi * 440 * t), sr, 16000)
+        tt = np.arange(out.size) / 16000
+        assert out.size == 16000
+        assert np.abs(out - np.sin(2 * np.pi * 440 * tt))[200:-200].max() < 0.01
+    above_nyquist = np.sin(2 * np.pi * 12000 * np.arange(48000) / 48000)
+    assert np.abs(audio.resample(above_nyquist, 48000, 16000))[200:-200].max() < 0.01
+    same = np.ones(5)
+    assert audio.resample(same, 16000, 16000).dtype == np.float32
