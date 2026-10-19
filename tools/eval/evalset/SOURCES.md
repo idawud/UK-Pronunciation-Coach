@@ -30,8 +30,8 @@
 - Every clip is read from one script. Speakers may still make small reading slips,
   so a few "false red" words could be real misreadings.
 - Note for A4: `speaker-info.txt` lists **p239 as "SW England"**. `VCTK_ENGLISH` in
-  `tools/models/data.py` has "SE England", which wrongly puts p239 in its `southern`
-  accent group.
+  `tools/models/data.py` has "SE England" (and "Stockport" for p230, which the file gives
+  as "Stockton-on-tees"). See docs/contract-requests/I2-eval.md.
 
 ## Expected pronunciations: Britfone 3.0.1
 
