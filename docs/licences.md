@@ -14,8 +14,8 @@ everything in the "Shipped" table.
 | _Light phoneme model (planned: pipeline ready, GPU training run pending)_ | `light-model.onnx`, `light-vocab.json` | Apache-2.0 (base model); trained on CSTR VCTK Corpus, CC-BY-4.0, attribution: "Trained in part on the CSTR VCTK Corpus (University of Edinburgh), CC BY 4.0" | facebook/wav2vec2-base fine-tuned in-house (docs/models.md) | A4 / A2 |
 | Full phoneme model, optional download | `full-model.onnx`, `full-vocab.json` | Apache-2.0 | facebook/wav2vec2-lv-60-espeak-cv-ft, re-exported to ONNX + uint8 quantised (docs/models.md) | A4 / A2 |
 | _Silero VAD (planned)_ | _tbd by A1_ | MIT | snakers4/silero-vad via sherpa-onnx | A1 |
-| _Britfone dictionary (planned)_ | _tbd by C1_ | MIT | Britfone | C1 |
-| _Passages (planned)_ | `passages.v1.json` | original or public domain, see `assets/content/SOURCES.md` | in-house | C1 |
+| Britfone 3.0.1 British English dictionary (normalised to the app's SSBE spelling; also the source of the phonemes in the passages, minimal pairs and alternatives) | `assets/content/britfone.v1.tsv`, `assets/content/BRITFONE_LICENSE.txt`, `assets/content/alternatives.v1.json` | MIT, Copyright (c) 2017 Jose Llarena | [JoseLlarena/Britfone](https://github.com/JoseLlarena/Britfone) at `1062be1`; source copy in `tools/content/britfone/` | C1 |
+| Passages (120 + 3 placement) and minimal pairs | `assets/content/passages.v1.json`, `assets/content/minimal_pairs.json` | Original writing for this app; 3 passages quote traditional public-domain tongue-twisters (see `assets/content/SOURCES.md`). Phonemes from Britfone (MIT); 93 words not in Britfone transcribed with eSpeak NG at build time and reviewed (`tools/content/review.md`) | in-house | C1 |
 | _Piper en_GB voice (optional, off by default)_ | _tbd by C4_ | check the voice's own licence | Piper | C4 |
 | Noto Sans Regular (IPA-capable UI font, family `NotoSansIPA`) | `assets/fonts/NotoSans-Regular.ttf` (licence text: `assets/fonts/NotoSans-OFL.txt`) | SIL Open Font License 1.1 | notofonts/latin-greek-cyrillic (Google Fonts / Noto Project), SHA-256 478c558e…3823 | U1 |
 
