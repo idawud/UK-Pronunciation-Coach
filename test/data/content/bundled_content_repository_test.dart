@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uk_pronunciation_coach/core/contracts/contracts.dart';
-import 'package:uk_pronunciation_coach/data/content/britfone_lexicon.dart';
 import 'package:uk_pronunciation_coach/data/content/bundled_content_repository.dart';
 
 import '../../contracts/content_repository_contract.dart';
