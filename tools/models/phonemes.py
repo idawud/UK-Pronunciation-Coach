@@ -51,12 +51,13 @@ def espeak_binary() -> str:
     return exe
 
 
-def espeak_ipa(text: str, voice: str = VOICE_RP, runner=subprocess.run) -> list[list[str]]:
+def espeak_ipa(text: str, voice: str = VOICE_RP, runner=None) -> list[list[str]]:
     """IPA phones for [text], one list per eSpeak word group, stress marks removed.
 
     Uses `espeak-ng -q --ipa --sep=_`; eSpeak sometimes merges short function words into
     one group ("from the"), which does not matter for utterance-level labels.
     """
+    runner = runner or subprocess.run
     result = runner(
         [espeak_binary(), "-q", "--ipa", "--sep=_", "-v", voice, text],
         capture_output=True,
@@ -100,7 +101,7 @@ def text_to_tokens(
     text: str,
     vocab: dict[str, int] | set[str],
     voice: str = VOICE_RP,
-    runner=subprocess.run,
+    runner=None,
 ) -> list[str]:
     """Flat vocab-token label sequence for a transcript."""
     phones = [p for word in espeak_ipa(text, voice, runner) for p in word]
