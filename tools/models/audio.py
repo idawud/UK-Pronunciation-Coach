@@ -3,14 +3,38 @@
 from __future__ import annotations
 
 import io
-from math import gcd
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
-from scipy.signal import resample_poly
 
 SAMPLE_RATE = 16000
+HALF_TAPS = 32  # windowed-sinc half width (input samples at the lower rate)
+CHUNK = 1 << 15
+
+
+def resample(audio: np.ndarray, sr_in: int, sr_out: int) -> np.ndarray:
+    """Band-limited resampling with a Kaiser-windowed sinc (numpy only; scipy's wheel
+    metadata trips the licence check). Cut-off is 0.95 x the lower Nyquist frequency."""
+    if sr_in == sr_out:
+        return audio.astype(np.float32)
+    ratio = sr_out / sr_in
+    cutoff = 0.95 * min(1.0, ratio)  # in units of the input Nyquist
+    n_out = int(np.ceil(audio.size * ratio))
+    half = int(np.ceil(HALF_TAPS / min(1.0, ratio)))
+    offsets = np.arange(-half + 1, half + 1)
+    padded = np.concatenate([np.zeros(half), audio, np.zeros(half + 1)])
+    window = np.kaiser(2 * half + 1, 8.6)
+    out = np.empty(n_out, dtype=np.float64)
+    for start in range(0, n_out, CHUNK):
+        t = np.arange(start, min(start + CHUNK, n_out)) / ratio  # input-sample positions
+        base = np.floor(t).astype(np.int64)
+        idx = base[:, None] + offsets[None, :]
+        dist = t[:, None] - idx
+        win = np.interp(dist, np.arange(-half, half + 1), window, left=0.0, right=0.0)
+        kernel = cutoff * np.sinc(cutoff * dist) * win
+        out[start : start + t.size] = (padded[idx + half] * kernel).sum(axis=1)
+    return out.astype(np.float32)
 
 
 def to_mono_16k(audio: np.ndarray, sr: int) -> np.ndarray:
@@ -18,10 +42,7 @@ def to_mono_16k(audio: np.ndarray, sr: int) -> np.ndarray:
     audio = np.asarray(audio, dtype=np.float32)
     if audio.ndim > 1:
         audio = audio.mean(axis=1)
-    if sr != SAMPLE_RATE:
-        g = gcd(sr, SAMPLE_RATE)
-        audio = resample_poly(audio, SAMPLE_RATE // g, sr // g).astype(np.float32)
-    return audio
+    return resample(audio, sr, SAMPLE_RATE)
 
 
 def load_audio(source: bytes | str | Path) -> np.ndarray:
