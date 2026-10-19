@@ -284,11 +284,11 @@ class ScoringController extends Notifier<ReadState> {
       try {
         await _recorder.start();
       } on MicPermissionException catch (e) {
-        await _stopStreams();
+        _stopStreams();
         _setPermissionDenied(e.state);
         return;
       } on Object {
-        await _stopStreams();
+        _stopStreams();
         _set(
           const ReadFailed(
             "We couldn't start the microphone. Close other apps that use it and "
@@ -343,11 +343,13 @@ class ScoringController extends Notifier<ReadState> {
     _set(ReadRecording(elapsed: _elapsed, levels: List.unmodifiable(_levels)));
   }
 
-  Future<void> _stopStreams() async {
+  /// Not awaited: a subscription's cancel future can outlive the widget test's fake
+  /// clock, and nothing depends on it finishing.
+  void _stopStreams() {
     _recordTicker?.cancel();
     _recordTicker = null;
-    await _levelSub?.cancel();
-    await _silenceSub?.cancel();
+    unawaited(_levelSub?.cancel());
+    unawaited(_silenceSub?.cancel());
     _levelSub = null;
     _silenceSub = null;
   }
@@ -360,7 +362,7 @@ class ScoringController extends Notifier<ReadState> {
     final run = _run;
     final AudioClip clip;
     try {
-      await _stopStreams();
+      _stopStreams();
       clip = await _recorder.stop();
     } on Object {
       _stopping = false;
@@ -400,7 +402,7 @@ class ScoringController extends Notifier<ReadState> {
   Future<void> discardRecording() async {
     if (state.phase is! ReadRecording) return;
     _run++;
-    await _stopStreams();
+    _stopStreams();
     await _recorder.cancel();
     _set(const ReadIdle());
   }
