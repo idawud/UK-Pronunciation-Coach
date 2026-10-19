@@ -10,11 +10,15 @@ environment:
 # Native plug-ins (record, permission_handler, sherpa_onnx, drift/sqlite, flutter_tts,
 # flutter_local_notifications, fl_chart, ...) are added by the agent that owns the feature.
 dependencies:
+  android_file_picker: ^2.1.1
   collection: ^1.19.1
   crypto: ^3.0.7
   device_info_plus: ^13.3.0
   drift: ^2.35.2
   ffi: ^2.2.0
+  file_picker_darwin: ^2.3.2
+  file_picker_platform_interface: ^4.2.0
+  fl_chart: ^1.2.0
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.4.3
