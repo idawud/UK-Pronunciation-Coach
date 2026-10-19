@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/contracts/navigation.dart';
+import '../../core/contracts/progress_repository.dart';
+import '../../core/providers.dart';
 import '../fix/fix_screen.dart';
 import '../home/home_screen.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -12,12 +14,45 @@ import '../read/read_screen.dart';
 import '../results/results_screen.dart';
 import '../settings/licences_screen.dart';
 import '../settings/settings_screen.dart';
+import '../theme/responsive.dart';
+
+/// Tab paths that need the first-run flow finished first.
+const _gatedPaths = {
+  AppRoutes.home,
+  AppRoutes.practise,
+  AppRoutes.progress,
+  AppRoutes.settings,
+  AppRoutes.licences,
+};
+
+/// Sends the user to onboarding until `UserProfile.onboardingDone` is true. Only the
+/// tab routes are gated: Read (used by placement), Results, Fix and Onboarding are not.
+/// If the profile cannot be read, the app opens normally rather than locking the user out.
+@visibleForTesting
+Future<String?> onboardingRedirect(
+  ProgressRepository progress,
+  String location,
+) async {
+  if (!_gatedPaths.contains(location)) return null;
+  try {
+    final profile = await progress.profile();
+    return profile.onboardingDone ? null : AppRoutes.onboarding;
+  } on Object {
+    return null;
+  }
+}
 
 /// The app router (seeded by W0 with every route in `AppRoutes`; U1 owns it).
 /// Tabs use a stateful shell; Read, Results, Fix and Onboarding are full-screen.
+/// Until onboarding is done the tab routes redirect to [AppRoutes.onboarding].
+/// The Practise tab takes an optional `?tab=library|sounds|review` query.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
     initialLocation: AppRoutes.home,
+    redirect: (context, state) => onboardingRedirect(
+      ref.read(progressRepositoryProvider),
+      state.matchedLocation,
+    ),
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
@@ -34,7 +69,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.practise,
-                builder: (context, state) => const PractiseScreen(),
+                builder: (context, state) => PractiseScreen(
+                  initialTab: PractiseTab.fromQuery(
+                    state.uri.queryParameters['tab'],
+                  ),
+                ),
               ),
             ],
           ),
@@ -93,7 +132,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return router;
 });
 
-/// Bottom navigation shell: Home, Practise, Progress, Settings.
+/// Navigation shell: Home, Practise, Progress, Settings. A bottom navigation bar on
+/// phones and portrait tablets; a navigation rail from [Breakpoints.rail] wide.
 class AppShell extends StatelessWidget {
   /// Creates the shell around [shell].
   const AppShell({super.key, required this.shell});
@@ -101,28 +141,55 @@ class AppShell extends StatelessWidget {
   /// The tab navigator.
   final StatefulNavigationShell shell;
 
+  static const _tabs = [
+    (Icons.home_outlined, Icons.home, 'Home'),
+    (Icons.menu_book_outlined, Icons.menu_book, 'Practise'),
+    (Icons.insights_outlined, Icons.insights, 'Progress'),
+    (Icons.settings_outlined, Icons.settings, 'Settings'),
+  ];
+
+  void _select(int i) =>
+      shell.goBranch(i, initialLocation: i == shell.currentIndex);
+
   @override
   Widget build(BuildContext context) {
+    if (context.windowSize == WindowSize.expanded) {
+      return Scaffold(
+        body: SafeArea(
+          child: Row(
+            children: [
+              NavigationRail(
+                selectedIndex: shell.currentIndex,
+                onDestinationSelected: _select,
+                labelType: NavigationRailLabelType.all,
+                destinations: [
+                  for (final (icon, selected, label) in _tabs)
+                    NavigationRailDestination(
+                      icon: Icon(icon),
+                      selectedIcon: Icon(selected),
+                      label: Text(label),
+                    ),
+                ],
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(child: shell),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       body: shell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,
-        onDestinationSelected: (i) =>
-            shell.goBranch(i, initialLocation: i == shell.currentIndex),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-          NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            label: 'Practise',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.insights_outlined),
-            label: 'Progress',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            label: 'Settings',
-          ),
+        onDestinationSelected: _select,
+        destinations: [
+          for (final (icon, selected, label) in _tabs)
+            NavigationDestination(
+              icon: Icon(icon),
+              selectedIcon: Icon(selected),
+              label: label,
+            ),
         ],
       ),
     );
