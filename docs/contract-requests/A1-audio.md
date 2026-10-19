@@ -33,8 +33,9 @@ second copy of ONNX Runtime in the app).
 
 ## 3. Native config (R1 / I1: `android/`, `ios/`)
 
-- **iOS** `ios/Podfile`: permission_handler compiles every permission out unless
-  enabled. Add to the `post_install` block:
+- **iOS**: permission_handler compiles every permission out unless enabled. There is
+  no `ios/Podfile` in the repo yet (Flutter creates it on the first CocoaPods build);
+  once it exists, add to its `post_install` block:
   `config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)', 'PERMISSION_MICROPHONE=1']`.
   Without it `Permission.microphone` always reports denied on iOS.
 - **iOS** `NSMicrophoneUsageDescription` is already in Info.plist (W0).
