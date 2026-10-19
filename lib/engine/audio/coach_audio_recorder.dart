@@ -69,7 +69,12 @@ class CoachAudioRecorder implements AudioRecorder {
        _recordingsDirectory = recordingsDirectory,
        // ignore: prefer_initializing_formals
        _clock = clock {
-    _vad = loadVad();
+    // Load the model and open the live session now: opening it inside the first
+    // start() would cost 100-300 ms of start latency.
+    _vad = loadVad().then((backend) {
+      if (!_disposed) _liveModel ??= backend.open();
+      return backend;
+    });
     // Avoid an unhandled error if nobody records before it fails.
     _vad.ignore();
   }
