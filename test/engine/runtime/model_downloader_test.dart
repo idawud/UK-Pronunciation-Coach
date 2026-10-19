@@ -201,8 +201,7 @@ void main() {
     network.unmetered = false;
     final d = make();
     final running = d.download();
-    await pumpEventQueue();
-    expect(d.status.state, DownloadState.waitingForWifi);
+    await waitForState(() => d.status.state, DownloadState.waitingForWifi);
     expect(d.status.isActive, isTrue);
     network.set(true);
     await running;
@@ -222,7 +221,7 @@ void main() {
     network.unmetered = false;
     final d = make();
     final running = d.download();
-    await pumpEventQueue();
+    await waitForState(() => d.status.state, DownloadState.waitingForWifi);
     await d.cancel();
     await expectLater(running, throwsA(isA<ModelDownloadException>()));
     expect(d.status.state, DownloadState.cancelled);
@@ -248,6 +247,16 @@ void main() {
     await running;
     expect(d.status.state, DownloadState.completed);
     expect(d.fileFor(files[0]).readAsBytesSync(), model);
+    await d.close();
+  });
+
+  test('cancel straight after starting is not lost', () async {
+    final d = make();
+    final running = d.download();
+    await d.cancel();
+    await expectLater(running, throwsA(isA<ModelDownloadException>()));
+    expect(d.status.state, DownloadState.cancelled);
+    expect(transport.requests, isEmpty);
     await d.close();
   });
 
