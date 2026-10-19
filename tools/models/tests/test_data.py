@@ -91,3 +91,10 @@ def test_main_writes_16k_clips_and_manifest(tmp_path, capsys):
 def test_main_requires_out():
     with pytest.raises(SystemExit):
         data.main(["--shards", "0"])
+
+
+def test_main_reads_local_parquet(tmp_path):
+    shard = make_shard(tmp_path / "s.parquet", [("p225_009_mic1", "p225", "Hi.", 0.5, "mic1")])
+    out = tmp_path / "out"
+    assert data.main(["--parquet", str(shard), "--speakers", "p225", "--out", str(out)]) == 0
+    assert (out / "wav" / "p225_009_mic1.wav").exists()
