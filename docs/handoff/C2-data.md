@@ -74,7 +74,7 @@ on a background isolate (`NativeDatabase.createInBackground`). Tests use
 - Performance: `attempts()` loads 1,000 attempts × 60 words (~160k phonemes) in
   **80 ms** with the machine lightly loaded and 153 ms under heavy load from parallel
   agents (best of 5; target < 200 ms). The query is one LEFT JOIN, mapped by hand.
-- Coverage: see `scripts/check.sh` output in the final report.
+- Coverage: `lib/data/` 87.4% (gate 85%). `scripts/check.sh` passes: 372 Dart tests, ruff and pytest, content and licence checks.
 - `integration_test/C2-data/` has been analysed only (no emulator here).
 
 ## pubspec edits
