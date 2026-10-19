@@ -91,7 +91,7 @@ See `tools/eval/README.md` for single runs, custom configs and recalibration.
 - `pytest tools/eval`: 38 tests, 99% coverage of `tools/eval/`.
 - `test/tools/eval`: 8 Dart tests.
 - `ruff` is clean.
-- `scripts/check.sh` result: see the end of this note.
+- `scripts/check.sh` passes: format, analyze, 336 Dart tests (6 skipped are A2's pre-existing skips), coverage gate (`lib/engine/` 98.1%), ruff, 118 pytest at 98.8% coverage of `tools/` (with `tools/models/requirements.txt` installed), content and licence checks.
 
 ## Known gaps
 
