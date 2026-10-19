@@ -126,7 +126,7 @@ void main() {
         err(
           await core.handle(6, 'load', ('broken.onnx', tinyVocab)),
           6,
-          'other',
+          'ort',
           'cannot open',
         );
         err(
@@ -160,6 +160,10 @@ void main() {
     expect(
       decodeWorkerError(encodeWorkerError(const FileSystemException('x'))),
       isA<FileSystemException>(),
+    );
+    expect(
+      decodeWorkerError(encodeWorkerError(const OnnxRuntimeException('o'))),
+      isA<OnnxRuntimeException>(),
     );
     expect(
       decodeWorkerError(encodeWorkerError(Exception('e'))),
