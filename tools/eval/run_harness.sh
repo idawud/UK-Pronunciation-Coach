@@ -8,9 +8,15 @@
 # 2. Native set (tools/eval/data/evalset/wav, built by `build_set build`): real engine
 #    via `flutter test tools/eval/dart/run_eval_test.dart`, then false-red / probe
 #    metrics. Fails when native false red >= EVAL_MAX_RED (default 0.05).
-# 3. Learner set (tools/eval/data/learners/<speaker>/<passage>.wav, see LABELLING.md):
-#    harness + word agreement with tools/eval/labels/labels.csv. Fails below 80%.
-# Every step whose inputs are missing (model, audio, labels) prints SKIPPED and passes.
+# 3. Synthetic British-voice set (the default accuracy gate, labels known by
+#    construction; see tools/eval/LABELLING.md): plan (text only), optional synthesis
+#    (EVAL_SYNTH_BUILD=1; hours on CPU, needs the voices from
+#    `python -m tools.eval.synth.build fetch`), harness, then agreement per split.
+#    Fails when agreement on EVAL_SYNTH_GATE voices (default heldout) < 80%.
+# 4. Optional learner set (tools/eval/data/learners/<speaker>/<passage>.wav) with
+#    teacher labels (tools/eval/labels/labels.csv). Fails below 80%.
+# Every step whose inputs are missing (model, audio, voices, labels) prints SKIPPED and
+# passes. All gates run; the script exits 1 if any of them failed.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -21,22 +27,26 @@ if [[ -x .venv/bin/python ]]; then PY=.venv/bin/python; else PY=python3; fi
 
 DATA=${EVAL_DATA_ROOT:-tools/eval/data}
 SET=$DATA/evalset
+SYN=$DATA/synth
 OUT=${EVAL_OUT_ROOT:-tools/eval/work}
 MODEL_DIR=${EVAL_MODEL_DIR:-}
 LABELS=${EVAL_LABELS:-tools/eval/labels/labels.csv}
 MAX_RED=${EVAL_MAX_RED:-0.05}
 CACHE=${EVAL_CACHE:-$OUT/posteriors}
+SYNTH_GATE=${EVAL_SYNTH_GATE:-heldout}
+STATUS=0
 
 step() { printf '\n==> %s\n' "$*"; }
+gate() { "$@" || STATUS=1; }
 
 step "passages + manifest (text only)"
 "$PY" -m tools.eval.build_set passages --out "$SET"
 
 have_model() { [[ -n "$MODEL_DIR" && -f "$MODEL_DIR/model.onnx" && -f "$MODEL_DIR/vocab.json" ]]; }
 
-run_harness() { # manifest data_dir out_dir
-  EVAL_MANIFEST="$1" EVAL_DATA="$2" EVAL_PASSAGES="$SET/passages.json" \
-    EVAL_MODEL_DIR="$MODEL_DIR" EVAL_OUT="$3" EVAL_CACHE="$CACHE" \
+run_harness() { # manifest data_dir passages out_dir
+  EVAL_MANIFEST="$1" EVAL_DATA="$2" EVAL_PASSAGES="$3" \
+    EVAL_MODEL_DIR="$MODEL_DIR" EVAL_OUT="$4" EVAL_CACHE="$CACHE" \
     flutter test tools/eval/dart/run_eval_test.dart
 }
 
@@ -46,15 +56,38 @@ if ! have_model; then
 elif [[ ! -d "$SET/wav" ]]; then
   echo "SKIPPED: no native audio in $SET/wav (python -m tools.eval.build_set build --shards ...)"
 else
-  run_harness "$SET/manifest.tsv" "$SET" "$OUT/native"
-  "$PY" -m tools.eval.analyse "$OUT/native" --json "$OUT/native/summary.json" --max-red "$MAX_RED"
+  run_harness "$SET/manifest.tsv" "$SET" "$SET/passages.json" "$OUT/native"
+  gate "$PY" -m tools.eval.analyse "$OUT/native" --json "$OUT/native/summary.json" \
+    --max-red "$MAX_RED"
 fi
 
-step "learner set: word agreement with teacher labels (go/no-go >= 80%)"
+step "synthetic British voices: word agreement (proxy go/no-go >= 80%)"
+"$PY" -m tools.eval.synth.build plan --out "$SYN"
+if [[ "${EVAL_SYNTH_BUILD:-0}" == "1" ]]; then
+  "$PY" -m tools.eval.synth.build synth --out "$SYN" --workers "${EVAL_SYNTH_WORKERS:-4}" ||
+    echo "SKIPPED: synthesis (voices missing? python -m tools.eval.synth.build fetch)"
+fi
+SYN_STATUS=$("$PY" -m tools.eval.synth.build status --out "$SYN")
+echo "$SYN_STATUS"
+if ! have_model; then
+  echo "SKIPPED: synthetic harness (no model)"
+elif ! grep -q 'still to render: 0$' <<<"$SYN_STATUS"; then
+  echo "SKIPPED: synthetic audio incomplete (EVAL_SYNTH_BUILD=1, or restore the cache)"
+else
+  run_harness "$SYN/manifest.tsv" "$SYN" "$SYN/passages.json" "$OUT/synth"
+  gate "$PY" -m tools.eval.synth.report --labels "$SYN/labels.csv" \
+    --words "$OUT/synth/words_default.csv" --json "$OUT/synth/summary.json" \
+    --gate "$SYNTH_GATE"
+fi
+
+step "learner set (optional): word agreement with teacher labels (>= 80%)"
 if have_model && compgen -G "$DATA/learners/*/*.wav" >/dev/null; then
-  run_harness tools/eval/labels/learner_manifest.tsv "$DATA" "$OUT/learners"
+  run_harness tools/eval/labels/learner_manifest.tsv "$DATA" "$SET/passages.json" \
+    "$OUT/learners"
 else
   echo "SKIPPED: learner harness (needs the model and $DATA/learners/<speaker>/*.wav)"
 fi
-"$PY" -m tools.eval.agreement score --labels "$LABELS" --words "$OUT/learners/words_default.csv" \
-  --json "$OUT/agreement.json"
+gate "$PY" -m tools.eval.agreement score --labels "$LABELS" \
+  --words "$OUT/learners/words_default.csv" --json "$OUT/agreement.json"
+
+exit "$STATUS"
