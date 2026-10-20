@@ -385,8 +385,9 @@ def train(
 ) -> list[dict]:
     """KL distillation loop with periodic checkpoints and resume.
 
-    Stops after [steps] optimiser steps or [hours] of wall clock (whichever first); the
-    LR schedule always spans [steps]. Returns the training history."""
+    Stops after [steps] optimiser steps or [hours] of training wall clock, whichever comes
+    first. The LR schedule follows whichever is further along, so the cosine decay always
+    finishes even on a slower (or busier) machine. Returns the training history."""
     out.mkdir(parents=True, exist_ok=True)
     params = [p for p in student.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(params, lr=lr, weight_decay=0.01)
@@ -419,6 +420,10 @@ def train(
     log_file = (out / "train_log.jsonl").open("a", encoding="utf-8")
     last_ckpt = time.time()
     budget = hours * 3600 if hours else float("inf")
+
+    def sched(step_now: int) -> int:
+        return max(step_now, int(steps * elapsed / budget)) if hours else step_now
+
     student.train()
     stop = step >= steps or elapsed >= budget
     while not stop:
@@ -431,7 +436,7 @@ def train(
             t_step = time.time()
             feats, logp, mask = collate_frames([cache.get(i) for i in idx])
             for group in opt.param_groups:
-                group["lr"] = lr_at(step, steps, warmup, lr)
+                group["lr"] = lr_at(sched(step), steps, warmup, lr)
             logits = logits_from_features(student, feats, mask)
             loss, parts = distill_loss(logits, logp, mask, temperature, ctc_weight, blank)
             opt.zero_grad()
@@ -446,7 +451,7 @@ def train(
                 "epoch": epoch,
                 "loss": round(float(loss), 5),
                 **{k: round(v, 5) for k, v in parts.items()},
-                "lr": lr_at(step - 1, steps, warmup, lr),
+                "lr": opt.param_groups[0]["lr"],
                 "frames": int(mask.sum()),
                 "sec": round(dt, 2),
             }
@@ -517,7 +522,9 @@ def main(argv: list[str] | None = None) -> int:
     t.add_argument("--out", type=Path, required=True)
     t.add_argument("--keep-layers", default="0,4,9,14,19,23")
     t.add_argument("--steps", type=int, default=3000)
-    t.add_argument("--hours", type=float, help="wall-clock budget (stop early, keep LR plan)")
+    t.add_argument(
+        "--hours", type=float, help="training wall-clock budget; LR decay follows steps or time"
+    )
     t.add_argument("--max-frames", type=int, default=3000)
     t.add_argument("--lr", type=float, default=5e-5)
     t.add_argument("--warmup", type=int, default=100)

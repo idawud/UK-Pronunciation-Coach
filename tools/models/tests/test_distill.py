@@ -186,6 +186,14 @@ def test_train_stops_on_time_budget(tmp_path, teacher, cache):
     assert len(hist) == 1
 
 
+def test_lr_follows_time_budget(tmp_path, teacher, cache):
+    student = d.make_student(teacher, (0,), dropout=0.0, mask_time_prob=0.0)
+    hist = d.train(student, cache, tmp_path / "s", steps=10**6, hours=2e-4, warmup=1,
+                   lr=1.0, max_frames=50, log=lambda m: None)  # fmt: skip
+    # with a million planned steps the LR would barely move; the time budget decays it
+    assert hist[-1]["lr"] < 0.9
+
+
 def test_multi_cache(tmp_path, teacher, cache):
     other = d.FrameCache(tmp_path / "other", teacher.config.conv_dim[-1], len(VOCAB))
     other.append("x", np.zeros((4, 32)), np.zeros((4, len(VOCAB))))
