@@ -68,22 +68,20 @@ s('facebook/wav2vec2-lv-60-espeak-cv-ft', revision='ae45363bf3413b374fecd9dc8bc1
 local_dir='$T', allow_patterns=['*.json', 'pytorch_model.bin'])"
   # held-out: A4's 60 clips (p225, p227, p228, p229); training never sees these or I2's
   # eval speakers (p231, p232). Train: every other speaker in shards 10/22/32/33, plus the
-  # English-accent speakers of shards 11/12/24/31 and 16/20 (about 4.4 h after trimming).
+  # English-accent speakers of shards 11/12/24/31 (about 3.4 h after trimming).
   [[ -f $D/eval/manifest.tsv ]] || $PY -m tools.models.data --shards 10,22 \
     --speakers p225,p227,p228,p229 --per-speaker 15 --out $D/eval
   [[ -f $D/a/manifest.tsv ]] || $PY -m tools.models.data --shards 10,22,32,33 \
     --speakers p250,p299,p360,p318,p364,p279,p241,p292,p239,p376 --out $D/a
   [[ -f $D/b/manifest.tsv ]] || $PY -m tools.models.data --shards 11,12,24,31 \
     --speakers p243,p270,p279,p254,p268,p250,p273,p267,p274 --out $D/b
-  [[ -f $D/c/manifest.tsv ]] || $PY -m tools.models.data --shards 16,20 \
-    --speakers p244,p258,p257 --out $D/c
-  for s in eval a b c; do
+  for s in eval a b; do
     $PY -m tools.models.distill prepare --teacher $T --manifest $D/$s/manifest.tsv \
       --cache $W/cache-$s
   done
-  $PY -m tools.models.distill train --teacher $T --cache $W/cache-{a,b,c} \
+  $PY -m tools.models.distill train --teacher $T --cache $W/cache-{a,b} \
     --eval-cache $W/cache-eval --out $W/student --keep-layers "$LIGHT_CPU_LAYERS" \
-    --steps 1200 --hours "${HOURS:-10.5}" --max-frames 1600 --lr 2e-4 --warmup 50 \
+    --steps 1200 --hours "${HOURS:-10}" --max-frames 1600 --lr 2e-4 --warmup 50 \
     --eval-every 100 --ckpt-minutes 30
   $PY -m tools.models.export_onnx --model $W/student/hf "${LIGHT_CPU_QUANT[@]}" \
     --out $M/release/light --work $W
