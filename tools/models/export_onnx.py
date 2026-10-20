@@ -90,14 +90,25 @@ def export_fp32(model: torch.nn.Module, path: Path, opset: int = OPSET, seconds:
     return path
 
 
+def nodes_matching(path: Path, patterns: tuple[str, ...]) -> list[str]:
+    """Names of graph nodes in [path] that contain any of [patterns] (substring match),
+    e.g. `conv_layers.0/` for the first conv of the feature encoder."""
+    if not patterns:
+        return []
+    model = onnx.load(str(path), load_external_data=False)
+    return [n.name for n in model.graph.node if any(p in n.name for p in patterns)]
+
+
 def quantize_int8(
     fp32_path: Path,
     int8_path: Path,
     ops: tuple[str, ...] = QUANT_OPS,
     weight_type: QuantType = WEIGHT_TYPE,
+    exclude: tuple[str, ...] = (),
 ) -> Path:
     """Dynamic 8-bit quantisation of [ops]: weights stored as 8-bit integers (uint8 by
-    default), activations quantised at run time."""
+    default), activations quantised at run time. Nodes whose name contains any of
+    [exclude] stay float32."""
     int8_path.parent.mkdir(parents=True, exist_ok=True)
     quantize_dynamic(
         model_input=str(fp32_path),
@@ -105,6 +116,7 @@ def quantize_int8(
         op_types_to_quantize=list(ops),
         weight_type=weight_type,
         per_channel=False,
+        nodes_to_exclude=nodes_matching(fp32_path, exclude),
     )
     onnx.checker.check_model(str(int8_path))
     return int8_path
@@ -142,6 +154,7 @@ def export_tier(
     work_dir: Path,
     opset: int = OPSET,
     quant_ops: tuple[str, ...] = QUANT_OPS,
+    exclude: tuple[str, ...] = (),
 ) -> dict:
     """Writes out_dir/model.onnx (int8) and out_dir/vocab.json; the fp32 export stays in
     work_dir. Returns a small summary (paths, sizes, export seconds)."""
@@ -150,7 +163,7 @@ def export_tier(
     t0 = time.perf_counter()
     export_fp32(model, fp32, opset)
     t1 = time.perf_counter()
-    int8 = quantize_int8(fp32, out_dir / "model.onnx", quant_ops)
+    int8 = quantize_int8(fp32, out_dir / "model.onnx", quant_ops, exclude=exclude)
     t2 = time.perf_counter()
     (out_dir / "vocab.json").write_text(
         json.dumps(vocab, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
@@ -164,6 +177,7 @@ def export_tier(
         "quantise_seconds": round(t2 - t1, 1),
         "opset": onnx_opset(int8),
         "quant_ops": list(quant_ops),
+        "quant_exclude": list(exclude),
         "weight_type": "uint8",
         "vocab_size": len(vocab),
         "blank_index": vocab["<pad>"],
@@ -177,10 +191,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--work", type=Path, required=True, help="scratch folder (fp32 export)")
     parser.add_argument("--opset", type=int, default=OPSET)
     parser.add_argument("--quantise-conv", action="store_true", help="also quantise Conv")
+    parser.add_argument(
+        "--quant-exclude",
+        nargs="*",
+        default=[],
+        help="keep nodes whose name contains any of these float32 (e.g. conv_layers.0/)",
+    )
     args = parser.parse_args(argv)
     model, vocab = load_model(args.model)
     ops = QUANT_OPS_WITH_CONV if args.quantise_conv else QUANT_OPS
-    summary = export_tier(model, vocab, args.out, args.work, args.opset, ops)
+    summary = export_tier(
+        model, vocab, args.out, args.work, args.opset, ops, tuple(args.quant_exclude)
+    )
     args.work.mkdir(parents=True, exist_ok=True)
     (args.work / "export.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2))
