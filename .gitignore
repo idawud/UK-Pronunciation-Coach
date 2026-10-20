@@ -57,5 +57,6 @@ coverage.xml
 
 # Downloaded model files (GitHub Release assets, never committed)
 assets/models/*.onnx
+assets/models/*-vocab.json
 .model-cache/
 *.iml

@@ -1,0 +1,45 @@
+{
+  "release": "models-v1",
+  "files": [
+    {
+      "name": "full-model.onnx",
+      "path": "full/model.onnx",
+      "tier": "full",
+      "asset": "full-model.onnx",
+      "url": "https://github.com/idawud/UK-Pronunciation-Coach-models/releases/download/models-v1/full-model.onnx",
+      "sha256": "61335ed80ca55f52bf33b24cfa36fcfe872a57ac3261c284ba62a5d0bbe26e93",
+      "size": 355431615,
+      "bundle": false
+    },
+    {
+      "name": "full-vocab.json",
+      "path": "full/vocab.json",
+      "tier": "full",
+      "asset": "full-vocab.json",
+      "url": "https://github.com/idawud/UK-Pronunciation-Coach-models/releases/download/models-v1/full-vocab.json",
+      "sha256": "6792ce4bae9994ecae2d6d2c9259a539d0efd8cb7aa7f8e3f657a0d8e0ee66dd",
+      "size": 5032,
+      "bundle": false
+    },
+    {
+      "name": "light-model.onnx",
+      "path": "light/model.onnx",
+      "tier": "light",
+      "asset": "light-model.onnx",
+      "url": "https://github.com/idawud/UK-Pronunciation-Coach-models/releases/download/models-v1/light-model.onnx",
+      "sha256": "ee06d16a7206fee53f760109c163b06ce3c3be0b4222bc7309aaca3a9a7fe61c",
+      "size": 89664247,
+      "bundle": true
+    },
+    {
+      "name": "light-vocab.json",
+      "path": "light/vocab.json",
+      "tier": "light",
+      "asset": "light-vocab.json",
+      "url": "https://github.com/idawud/UK-Pronunciation-Coach-models/releases/download/models-v1/light-vocab.json",
+      "sha256": "6792ce4bae9994ecae2d6d2c9259a539d0efd8cb7aa7f8e3f657a0d8e0ee66dd",
+      "size": 5032,
+      "bundle": true
+    }
+  ]
+}
