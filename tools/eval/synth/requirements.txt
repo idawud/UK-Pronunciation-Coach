@@ -1,0 +1,5 @@
+# I2-eval synthetic British-voice set (dev-side only, never shipped).
+# Licences: onnxruntime MIT, numpy BSD-3-Clause. The TTS models run on onnxruntime;
+# no TTS front-end package (kokoro, misaki, piper) is needed.
+numpy==2.5.4
+onnxruntime==1.31.0
