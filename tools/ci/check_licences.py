@@ -9,7 +9,9 @@ Fails when:
     is not mentioned in docs/licences.md.
 
 Human-approved exceptions go in tools/ci/licence_allowlist.txt, one
-`name  # reason` per line. eSpeak NG is used as a binary, not a package, so it never
+`name  # reason` per line. Note: the MPL-2.0 text names the GNU Affero licence as a
+possible "Secondary License" (its section 1.12), so classify() reports MPL-2.0
+packages as AGPL; approved ones (`dbus`, `nm`) are allowlisted by name. eSpeak NG is used as a binary, not a package, so it never
 appears here; keep it out of anything shipped.
 
     python3 tools/ci/check_licences.py [--root .]

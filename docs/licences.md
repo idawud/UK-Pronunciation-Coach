@@ -23,6 +23,23 @@ everything in the "Shipped" table.
 Replace each _planned_ row with the real file names when the component lands.
 Dart packages are checked automatically from `pubspec.lock`.
 
+### Dart packages with an approved exception
+
+The licence check reads MPL-2.0 as AGPL (the MPL text names the GNU Affero licence
+as a possible "Secondary License"). These are allowed by name in
+`tools/ci/licence_allowlist.txt`:
+
+| Package | Licence | Pulled in by | Shipped? | Approved |
+| --- | --- | --- | --- | --- |
+| `dbus` 0.8.x | MPL-2.0 | `flutter_local_notifications_linux`, `connectivity_plus` (Linux implementation) | No: Linux desktop only; never compiled into the Android or iOS app | owner, 2026-10-20 |
+| `nm` 0.6.x | MPL-2.0 | `connectivity_plus` (Linux implementation) | No: Linux desktop only | owner, 2026-10-20 |
+
+Plug-ins added for reminders and the Wi-Fi check (all permissive):
+`flutter_local_notifications` and its platform packages (BSD-3-Clause),
+`timezone` (BSD-2-Clause, IANA tz data public domain), `flutter_timezone`
+(Apache-2.0), `connectivity_plus` (BSD-3-Clause), and transitively `http`
+(BSD-3-Clause), `xml` and `petitparser` (MIT).
+
 ## Dev-side only (never shipped)
 
 | Tool | Licence | Used for |

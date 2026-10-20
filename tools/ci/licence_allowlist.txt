@@ -1,0 +1,11 @@
+# Human-approved exceptions to the licence check (tools/ci/check_licences.py).
+# One `name  # reason` per line; the name matches a Dart or Python package.
+#
+# Why MPL-2.0 packages land here: the Mozilla Public License 2.0 text names the
+# "GNU Affero General Public License" (with the GPL and LGPL) as a possible
+# "Secondary License" in its section 1.12, so check_licences.classify() reads it as
+# AGPL. MPL-2.0 is file-level copyleft, not AGPL; each entry is still reviewed
+# by a human because the classifier is not changed to trust MPL wholesale.
+
+dbus  # MPL-2.0; Linux-desktop-only transitive of flutter_local_notifications_linux, connectivity_plus (Linux impl) and file_picker_linux; owner-approved 2026-10-20; not built into the Android or iOS app
+nm  # MPL-2.0; Linux-desktop-only transitive of connectivity_plus (Linux impl, NetworkManager client); owner-approved 2026-10-20; not built into the Android or iOS app
