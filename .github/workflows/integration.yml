@@ -61,6 +61,11 @@ jobs:
           key: models-${{ hashFiles('assets/models/manifest.json') }}
       - name: Fetch model files from GitHub Release assets
         run: python3 tools/ci/fetch_models.py --cache .model-cache
+      # Build once before the emulator boots: the first Gradle build downloads the NDK and
+      # compiles native code, and doing that next to a running emulator froze it ("hanging
+      # thread 'QEMU2 main loop'"). Later per-file test builds reuse this Gradle output.
+      - name: Warm up the Android build
+        run: flutter build apk --debug
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
