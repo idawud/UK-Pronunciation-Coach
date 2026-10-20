@@ -14,10 +14,20 @@ engine. Results and the spike verdict are in `docs/eval-report.md`.
 | `calibrate.py` | Calibration search: the probe config exposes the GOP; a simulation of the word-score rules matches Dart on 99.6% of words. |
 | `agreement.py` | Teacher-label template and word agreement (go/no-go at 80%). |
 | `run_harness.sh` | Runs everything end to end; `.github/workflows/eval.yml` calls it. |
+| `synth/` | Synthetic British-voice set (the default accuracy gate, a proxy): `phonemes.py` (SSBE -> Kokoro / Piper symbols), `sentences.py` + `sentences.tsv`, `inject.py` (learner errors, labels by construction), `augment.py`, `voices.py` (pinned voices, ONNX engines), `build.py` (fetch / plan / synth / status / subset), `report.py` (agreement, kappa, per-error detection), `calibrate.py` (search guarded by VCTK false red). Sources and licences: `SOURCES.md`. |
 | `LABELLING.md`, `labels/` | Teacher instructions, the learner manifest, the 50 sentences and the label template. |
 | `evalset/` | Clip list, sources and licences, VCTK `speaker-info.txt`. |
 
-## Quick start
+## Quick start (synthetic labels, the default gate)
+
+```bash
+pip install -r tools/eval/synth/requirements.txt
+python -m tools.eval.synth.build fetch && python -m tools.eval.synth.build plan
+OMP_NUM_THREADS=1 python -m tools.eval.synth.build synth --workers 4   # ~3 h on 4 cores
+EVAL_MODEL_DIR=/home/idawud/coach-models/release-full/full tools/eval/run_harness.sh
+```
+
+## Quick start (native set)
 
 ```bash
 export PATH="$HOME/flutter/bin:$PATH"

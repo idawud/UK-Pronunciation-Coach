@@ -54,6 +54,7 @@ def test_summarise():
     s = R.summarise(*dataset())
     assert s["all"]["words"] == 7
     assert s["all"]["agreement"] == pytest.approx(5 / 7)
+    assert s["always_right_baseline"] == pytest.approx(4 / 7)
     assert s["all_amber_wrong"]["agreement"] == pytest.approx(6 / 7)
     assert s["by_split"]["heldout"]["agreement"] == pytest.approx(2 / 3)
     assert set(s["by_voice"]) == {"v1", "v2"}
@@ -97,6 +98,8 @@ def test_main_gate(tmp_path, capsys):
         == 0
     )
     assert R.main(["--labels", str(lp), "--words", str(wp), "--gate", "nope"]) == 0
+    args = ["--labels", str(lp), "--words", str(wp), "--threshold", "0.6"]
+    assert R.main([*args, "--min-kappa", "0.9"]) == 1
     assert "SKIPPED" in capsys.readouterr().out
 
 

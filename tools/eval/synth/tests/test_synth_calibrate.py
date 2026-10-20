@@ -52,6 +52,10 @@ def test_search_respects_native_red_limit():
     harsh = cal.Params(curve=[(-10, 0), (10, 0)])  # everything red
     best, m, n = sc.search(synth, labels, native, [harsh, sc.CURRENT], max_red=0.1)
     assert n == 2 and best is sc.CURRENT and m["agree_tune"] == 1.0
+    best2, _, _ = sc.search(
+        synth, labels, native, [harsh, sc.CURRENT], max_red=0.1, objective="agreement"
+    )
+    assert best2 is sc.CURRENT
     none, m2, _ = sc.search(synth, labels, native, [harsh], max_red=0.1)
     assert none is None and m2 == {}
 
