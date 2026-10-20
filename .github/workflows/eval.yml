@@ -1,12 +1,19 @@
 # Accuracy check (I2-eval): runs the real engine (full-tier ONNX model + GOP scorer) on
-# the stored eval set and the teacher-labelled learner set. Fails when native false red
-# is >= 5% or word agreement with the teacher labels is < 80%. Every part whose inputs
-# are missing (unpublished model, no learner audio, no labels yet) is SKIPPED and passes.
-# See tools/eval/README.md and docs/eval-report.md.
+# the native VCTK set, the synthetic British-voice set (TTS reads with injected errors,
+# labels known by construction: the default 80% agreement gate, a proxy) and, if
+# configured, the teacher-labelled learner set. Fails when native false red is >= 5% or
+# word agreement is < 80%. Every part whose inputs are missing (unpublished model, no
+# synthetic audio in the cache, no learner audio or labels) is SKIPPED and passes.
+# See tools/eval/README.md, tools/eval/LABELLING.md and docs/eval-report.md.
 name: eval
 
 on:
   workflow_dispatch:
+    inputs:
+      build_synth:
+        description: "Synthesise the British-voice set when it is not cached (~500 MB of voices, hours of CPU)"
+        type: boolean
+        default: false
   schedule:
     - cron: "0 5 * * 1" # Mondays 05:00 UTC
 
@@ -22,7 +29,7 @@ jobs:
   eval:
     name: eval
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 360 # a cold synthetic build is CPU-bound for hours
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
@@ -37,7 +44,8 @@ jobs:
       - name: Python dependencies (dev-side only)
         run: |
           python -m venv .venv
-          .venv/bin/pip install -r tools/requirements-dev.txt soundfile==0.14.0 pyarrow==26.0.0
+          .venv/bin/pip install -r tools/requirements-dev.txt -r tools/eval/synth/requirements.txt \
+            soundfile==0.14.0 pyarrow==26.0.0
       - run: flutter pub get
 
       - name: Fetch the full-tier model (skipped until it is published)
@@ -82,6 +90,32 @@ jobs:
           .venv/bin/python -m tools.eval.build_set build --shards tools/eval/data/vctk
           rm -rf tools/eval/data/vctk
 
+      - name: Synthetic British-voice audio cache (labels are rebuilt from the committed text)
+        if: steps.model.outputs.dir != ''
+        id: synth
+        uses: actions/cache/restore@v6
+        with:
+          path: tools/eval/data/synth/wav
+          key: eval-synth-${{ hashFiles('tools/eval/synth/*.py', 'tools/eval/synth/sentences.tsv', 'assets/content/passages.v1.json') }}
+      - name: TTS voices cache (Kokoro-82M Apache-2.0, Piper cori MIT; see tools/eval/SOURCES.md)
+        if: steps.model.outputs.dir != '' && steps.synth.outputs.cache-hit != 'true' && inputs.build_synth
+        uses: actions/cache@v6
+        with:
+          path: tools/eval/data/voices
+          key: eval-voices-${{ hashFiles('tools/eval/synth/voices.py') }}
+      - name: Synthesise the British-voice set (manual runs with build_synth only)
+        if: steps.model.outputs.dir != '' && steps.synth.outputs.cache-hit != 'true' && inputs.build_synth
+        run: |
+          .venv/bin/python -m tools.eval.synth.build fetch
+          .venv/bin/python -m tools.eval.synth.build plan
+          .venv/bin/python -m tools.eval.synth.build synth --workers 4
+      - name: Save the synthetic audio (even if a gate fails later)
+        if: steps.model.outputs.dir != '' && steps.synth.outputs.cache-hit != 'true' && inputs.build_synth
+        uses: actions/cache/save@v6
+        with:
+          path: tools/eval/data/synth/wav
+          key: ${{ steps.synth.outputs.cache-primary-key }}
+
       - name: Learner audio (owner-supplied zip; skipped when not configured)
         env:
           LEARNER_AUDIO_URL: ${{ vars.EVAL_LEARNER_AUDIO_URL }}
@@ -96,7 +130,7 @@ jobs:
           curl -sfL "${auth[@]}" -o learners.zip "$LEARNER_AUDIO_URL"
           mkdir -p tools/eval/data && unzip -q learners.zip -d tools/eval/data && rm learners.zip
 
-      - name: Harness, native false red and teacher agreement
+      - name: Harness, native false red, synthetic and teacher agreement
         env:
           EVAL_MODEL_DIR: ${{ steps.model.outputs.dir }}
         run: tools/eval/run_harness.sh
@@ -109,4 +143,5 @@ jobs:
             tools/eval/work/*/*.csv
             tools/eval/work/*/summary.json
             tools/eval/work/agreement.json
+            tools/eval/data/synth/labels.csv
           if-no-files-found: ignore
