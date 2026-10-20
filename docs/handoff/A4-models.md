@@ -129,5 +129,6 @@ labels. Full details and numbers are in `docs/models.md`, section "Light tier wi
   - Or run it, or the wav2vec2-base fine-tune, on a free Kaggle GPU (instructions in docs/models.md).
   - No long new run was started.
 - **Outside my folders:** the light-model row and the VCTK row in `docs/licences.md`, under the same coordinator
-  exception as before.
+  exception as before. The row still mentions wav2vec2-base, because U4's Licences page test checks for it.
+  `docs/contract-requests/A4-models.md` asks U4 to update the page text.
 
