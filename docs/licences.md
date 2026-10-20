@@ -11,7 +11,7 @@ everything in the "Shipped" table.
 
 | Component | File(s) | Licence | Source | Added by |
 | --- | --- | --- | --- | --- |
-| _Light phoneme model (planned: pipeline ready, GPU training run pending)_ | `light-model.onnx`, `light-vocab.json` | Apache-2.0 (base model); trained on CSTR VCTK Corpus, CC-BY-4.0, attribution: "Trained in part on the CSTR VCTK Corpus (University of Edinburgh), CC BY 4.0" | facebook/wav2vec2-base fine-tuned in-house (docs/models.md) | A4 / A2 |
+| Light phoneme model (bundled; built, not yet published) | `light-model.onnx`, `light-vocab.json` | Apache-2.0 (derived from facebook/wav2vec2-lv-60-espeak-cv-ft, Apache-2.0: pre-trained on LibriLight, fine-tuned on Common Voice CC0); distilled on CSTR VCTK Corpus audio, CC-BY-4.0, attribution: "Trained in part on the CSTR VCTK Corpus (University of Edinburgh), CC BY 4.0" | 6-layer copy of the full model distilled on CPU in-house (docs/models.md, "Light tier without GPU") | A4 / A2 |
 | Full phoneme model, optional download | `full-model.onnx`, `full-vocab.json` | Apache-2.0 | facebook/wav2vec2-lv-60-espeak-cv-ft, re-exported to ONNX + uint8 quantised (docs/models.md) | A4 / A2 |
 | _Silero VAD (planned)_ | _tbd by A1_ | MIT | snakers4/silero-vad via sherpa-onnx | A1 |
 | Britfone 3.0.1 British English dictionary (normalised to the app's SSBE spelling; also the source of the phonemes in the passages, minimal pairs and alternatives) | `assets/content/britfone.v1.tsv`, `assets/content/BRITFONE_LICENSE.txt`, `assets/content/alternatives.v1.json` | MIT, Copyright (c) 2017 Jose Llarena | [JoseLlarena/Britfone](https://github.com/JoseLlarena/Britfone) at `1062be1`; source copy in `tools/content/britfone/` | C1 |
@@ -49,7 +49,7 @@ Plug-ins added for reminders and the Wi-Fi check (all permissive):
 | Roboto, Material Icons (test/fixtures/fonts) | Apache-2.0 | golden tests |
 | DejaVu Sans (test/fixtures/fonts) | Bitstream Vera licence (permissive) | golden tests, IPA glyph fallback |
 | pytest, pytest-cov, ruff, numpy | MIT / MIT / MIT / BSD-3-Clause | tools/ tests and scripts |
-| CSTR VCTK Corpus 0.92 | CC-BY-4.0 | `tools/models/`: light-tier training data, held-out PER and logits checks (A4). Data never shipped; only trained weights. |
+| CSTR VCTK Corpus 0.92 | CC-BY-4.0 | `tools/models/`: light-tier distillation audio, held-out PER and logits checks (A4). Data never shipped; only trained weights. |
 | torch, transformers, onnx, onnxruntime, safetensors, huggingface_hub, soundfile, pyarrow | BSD-3-Clause / Apache-2.0 / Apache-2.0 / MIT / Apache-2.0 / Apache-2.0 / BSD-3-Clause / Apache-2.0 | `tools/models/` export, quantisation, training (A4) |
 
 ## Piper en_GB voices reviewed (C4, 2026-10-19)
