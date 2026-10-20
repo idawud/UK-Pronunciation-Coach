@@ -52,6 +52,17 @@ Full numbers are in docs/eval-report.md, "Synthetic British-voice evaluation".
   accuracy**, because kappa is low and the engine catches fewer than 1 in 4 clean,
   deliberate errors.
 
+**Checks**:
+
+- `scripts/check.sh`: format, analyze and the coverage gate pass. ruff passes, and pytest
+  passes 230 tests at 99.2% coverage of `tools/`, with `tools/models/requirements.txt`
+  installed. Content and licence checks pass.
+- Under heavy CPU load from other agents, the timing tests flaked in full runs:
+  - A3's 200-word benchmark (103 ms against 100 ms);
+  - C2's 1,000-attempt load test (600 ms against 200 ms);
+  - A1's recorder test, once.
+- All of them pass when run alone. No Dart code changed on this branch.
+
 **Known gaps**:
 
 - **It's a proxy.** TTS voices make clean substitutions with no accent, so the result
