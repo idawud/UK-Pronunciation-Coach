@@ -82,8 +82,12 @@ def summarise(labels: list[dict], words: list[dict]) -> dict:
     status_by_read: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for lab, w in pairs:
         status_by_read[lab.get("read", "")][w["status"]] += 1
+    every = score(labels, words)
+    right = every.get("engine_right_teacher_right", 0) + every.get("engine_wrong_teacher_right", 0)
     return {
-        "all": score(labels, words),
+        # agreement of an engine that marks every word right: the floor to beat
+        "always_right_baseline": right / every["words"] if every.get("words") else 0.0,
+        "all": every,
         "all_amber_wrong": score(labels, words, amber_wrong=True),
         "by_split": grouped(labels, words, lambda r: r.get("split") or None),
         "by_voice": grouped(labels, words, lambda r: r.get("voice") or r.get("speaker")),
@@ -115,7 +119,12 @@ def format_summary(s: dict) -> str:
             f"recall {pct(m['recall_of_wrong_words'])}"
         )
 
-    out = [line("all", s["all"]), line("all (amber = wrong)", s["all_amber_wrong"])]
+    out = [
+        line("all", s["all"]),
+        f"{'':22} (an engine marking every word right would agree "
+        f"{pct(s['always_right_baseline'])})",
+        line("all (amber = wrong)", s["all_amber_wrong"]),
+    ]
     out += [line(f"split {k}", v) for k, v in s["by_split"].items()]
     out += [line(f"read {k}", v) for k, v in s["by_read"].items()]
     out += [line(f"voice {k}", v) for k, v in s["by_voice"].items()]
@@ -140,6 +149,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--gate", default="heldout", help="split whose agreement is gated ('all' for every voice)"
     )
+    ap.add_argument(
+        "--min-kappa", type=float, help="also require Cohen's kappa >= this on the gate split"
+    )
     args = ap.parse_args(argv)
     for p in (args.labels, args.words):
         if not p.exists():
@@ -155,6 +167,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"SKIPPED: no scored words in split {args.gate!r}")
         return 0
     ok = gate["agreement"] >= args.threshold
+    if args.min_kappa is not None and gate["kappa"] < args.min_kappa:
+        print(f"kappa {gate['kappa']:.3f} < --min-kappa {args.min_kappa}")
+        ok = False
     print(
         f"{'GO' if ok else 'NO-GO'} (synthetic proxy, {args.gate} voices): word agreement "
         f"{pct(gate['agreement'])}, kappa {gate['kappa']:.3f} (threshold {args.threshold:.0%})"

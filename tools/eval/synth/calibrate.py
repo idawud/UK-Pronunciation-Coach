@@ -10,8 +10,9 @@ then recomputes word colours for any curve / cap / r score / dropped score.
         --native-words tools/eval/work/native/words_probe.csv \
         --max-red 0.035 --out tools/eval/work/synth_tuned.json
 
-The search maximises word agreement on the TUNING voices only, subject to native false
-red on the VCTK tuning speakers <= --max-red (the release target is < 5%, so keep a
+The search maximises Cohen's kappa (or `--objective agreement`) on the TUNING voices
+only, subject to native false red on the VCTK tuning speakers <= --max-red (the release
+target is < 5%, so keep a
 margin). It prints the held-out voices and held-out VCTK speakers for the best config
 and for the current defaults, so a change is only adopted when it also helps there.
 """
@@ -85,17 +86,20 @@ def search(
     native: list[cal.WordObs],
     params: Iterable[cal.Params],
     max_red: float,
+    objective: str = "kappa",
 ) -> tuple[cal.Params | None, dict, int]:
-    """Best tuning-voice agreement with native tuning red <= [max_red]."""
-    best, best_m, n = None, {}, 0
+    """Best tuning-voice [objective] (`kappa` or `agreement`) with native tuning red
+    <= [max_red]. Kappa is the default: about 87% of synthetic words are right, so raw
+    agreement rewards an engine that marks fewer words red."""
+    best, best_v, best_m, n = None, -2.0, {}, 0
     for p in params:
         n += 1
         nat = cal.simulate(native, p)
         if native_red(nat, "tune") > max_red:
             continue
         m = score(labels["tune"], cal.simulate(synth, p))
-        if best is None or m["agreement"] > best_m["agree_tune"]:
-            best, best_m = p, {"agree_tune": m["agreement"]}
+        if m.get(objective, -1.0) > best_v:
+            best, best_v = p, m[objective]
     if best is not None:
         best_m = evaluate(best, synth, labels, native)
     return best, best_m, n
@@ -118,12 +122,13 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - CLI wiring
     ap.add_argument("--native-words", type=Path, required=True)
     ap.add_argument("--max-red", type=float, default=0.035)
     ap.add_argument("--out", type=Path)
+    ap.add_argument("--objective", choices=["kappa", "agreement"], default="kappa")
     args = ap.parse_args(argv)
     synth = cal.observe(read_csv(args.synth_words))
     native = cal.observe(read_csv(args.native_words))
     labels = split_labels(read_csv(args.labels))
     current = evaluate(CURRENT, synth, labels, native)
-    best, m, n = search(synth, labels, native, cal.candidates(), args.max_red)
+    best, m, n = search(synth, labels, native, cal.candidates(), args.max_red, args.objective)
     print(json.dumps({"current": current, "best": m, "tried": n}, indent=1))
     if best is not None:
         print(json.dumps(asdict(best)))
