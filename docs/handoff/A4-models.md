@@ -60,9 +60,8 @@ log-softmax yourself. There is no `attention_mask` input. After publishing, copy
 
 ## Known gaps
 
-- **The light model does not exist yet.** It needs a GPU run, which was out of scope with no GPU here.
-  Until then, A2 has no `light-model.onnx`. One option is a temporary uint8 full model in the light slot, but
-  it is too large to bundle.
+- ~~The light model does not exist yet.~~ Superseded: a CPU-distilled light model now exists (see "Light tier
+  without GPU" below). The wav2vec2-base GPU run is still not done.
 - **Nothing is published.** The GitHub Release URL is a placeholder:
   `https://github.com/OWNER/REPO/releases/download/models-v1/<asset>`.
 - **Small held-out set**: 60 clips from 4 speakers (3 Southern England F, 1 Cumbrian M).
@@ -81,3 +80,54 @@ log-softmax yourself. There is no `attention_mask` input. After publishing, copy
   fit the 15-minute limit with pip caching, but I could not run it on GitHub.
 - **Local eSpeak**: the eSpeak NG binary in `~/.local/root` needed libpulse. I extracted it into the session
   scratchpad and used a wrapper script; nothing was installed system-wide.
+
+## Light tier without GPU (branch feat/a4-light-cpu, 2026-10-20)
+
+**Built:** a CPU-only light tier. The full model was distilled into a 6-layer copy of itself, with no GPU and no hand
+labels. Full details and numbers are in `docs/models.md`, section "Light tier without GPU".
+
+- **Survey.** No shippable small model uses our eSpeak vocab.
+  - The best alternative is Peacockery/hubert-base-phoneme-en (Apache-2.0, LibriSpeech). Its vocab is 39 ARPAbet
+    phones, and its PER is 10.3% in ARPAbet space, against 7.1% for the full model.
+  - ZIPA-small (CC-BY-4.0) needs an fbank front end.
+  - The rest fail on licence or data.
+- **Tool: `tools/models/distill.py`.**
+  - `prepare` runs the teacher once and caches its conv features and log-posteriors as float16.
+  - `init-check` compares layer choices before training.
+  - `train` uses a KL loss, checkpoints every 30 min and resumes; the LR schedule follows the time budget.
+  - `compare` measures agreement with the teacher.
+  - Other changes: `export_onnx --quant-exclude`; an exact, about 40x faster 48→16 kHz resampler in `audio.py`; and
+    `reproduce.sh light-cpu`, with `PY` and `SKIP_SETUP` overrides for notebooks.
+- **Student:** teacher layers 0, 4, 8, 12, 16 and 20; 89.1 M parameters; the same 392-token vocab (byte-identical
+  `light-vocab.json`).
+  - Data: 6,040 VCTK clips (3.36 h). Held-out speakers and I2's eval speakers are excluded.
+  - Time on an i5 laptop: teacher pass 4.4 h, training 7.4 h (1,200 steps).
+- **Files** (not committed, not published), in `/home/idawud/coach-models/light-cpu/release/`:
+  - `light/model.onnx` (89,664,247 B, uint8, Conv quantised except `conv_layers.0`) and `light/vocab.json`;
+  - the full tier, hard-linked;
+  - `manifest.json` and `SHA256SUMS` (dry run). `light-model.onnx` has sha256
+    `ee06d16a7206fee53f760109c163b06ce3c3be0b4222bc7309aaca3a9a7fe61c`.
+- **Quality, honestly: worse than the full tier.**
+
+  | Measure | Light tier | Full tier |
+  | --- | --- | --- |
+  | PER, en-us references | 24.5% | 8.6% |
+  | Frame argmax agreement with the full model | 89.1% | – |
+  | I2 native false red | **7.1%** (fails the 5% gate) | 3.6% |
+  | Substitution probes caught | 68% | 79% |
+  | Word swaps caught | 99.6% | 99.6% |
+  | 20 s of audio, 4 desktop threads | 2.0 s | 4.7 s |
+  | 20 s of audio, 1 thread | 3.4 s | 8.5 s |
+
+- **For A2:** after publishing, copy `manifest.json` to `assets/models/` and bundle `light-model.onnx` and
+  `light-vocab.json`. I2's harness already loaded the file through `OnnxPhonemeRecognizer`.
+- **For I2:**
+  - Re-calibrate `ScoringConfig` for the light tier, or have it fall back to word-level colours only.
+  - Do not make it the default tier until the false-red rate is under 5%.
+- **Next step recommended:**
+  - More distillation data and time: resume with set c plus LibriSpeech over 2–3 more nights.
+  - Or run it, or the wav2vec2-base fine-tune, on a free Kaggle GPU (instructions in docs/models.md).
+  - No long new run was started.
+- **Outside my folders:** the light-model row and the VCTK row in `docs/licences.md`, under the same coordinator
+  exception as before.
+

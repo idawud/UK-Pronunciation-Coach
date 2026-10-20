@@ -8,7 +8,8 @@ git-ignored.
 | Tier | Source model | File | Size | Status |
 | --- | --- | --- | --- | --- |
 | Full (optional download) | facebook/wav2vec2-lv-60-espeak-cv-ft (Apache-2.0), unchanged weights | `full-model.onnx` + `full-vocab.json` | 355.4 MB (fp32 1,263.8 MB) | built and verified |
-| Light (bundled) | facebook/wav2vec2-base (Apache-2.0) fine-tuned on eSpeak RP phoneme labels | `light-model.onnx` + `light-vocab.json` | about 95 MB (measured on the base architecture) | pipeline ready and smoke-tested; GPU training run still to do |
+| Light (bundled) | 6-layer copy of the full model, distilled on CPU from its posteriors (Apache-2.0; VCTK CC-BY-4.0) | `light-model.onnx` + `light-vocab.json` (same 392-token vocab as full) | 89.7 MB (fp32 356.6 MB) | built and verified; PER 24.5% vs full 8.6%, native false red 7.1% (see "Light tier without GPU") |
+| Light, GPU alternative | facebook/wav2vec2-base (Apache-2.0) fine-tuned on eSpeak RP phoneme labels | same names | about 95 MB | pipeline ready; GPU run not done (free Kaggle/Colab route below) |
 
 ## Model file contract (what A2 loads)
 
@@ -22,12 +23,14 @@ git-ignored.
   id *i*. The CTC blank is `<pad>`, id **0**. The other special tokens are `<s>`=1, `</s>`=2 and `<unk>`=3.
 - Full vocab: **392** tokens, the model's own multilingual eSpeak inventory. Its English tokens follow
   eSpeak `en-us`, e.g. `oʊ`, `ɚ`, `ɑːɹ`, `ɔːɹ`, `ɛɹ`, `ɪɹ`, `ʊɹ`, `aɪɚ`. British symbols also exist (`əʊ`, `ɒ`, `eə`, `ɪə`, `ʊə`).
-- Light vocab: the specials plus every token that appears in the training labels, **in full-vocab
-  order and using the same strings**. A3's IPA-to-vocab table therefore serves both tiers.
+- Light vocab: the distilled light tier (current) uses the **full 392-token vocab unchanged**; `light-vocab.json`
+  is byte-identical to `full-vocab.json`. (The GPU-alternative pipeline would use the specials plus every token in its
+  RP training labels, in full-vocab order with the same strings.) Either way A3's IPA-to-vocab table serves both tiers.
 - Quantisation: ONNX Runtime dynamic quantisation with **uint8 (QUInt8) weights**. This follows A2-runtime's
   finding that ONNX Runtime's CPU ConvInteger kernel does not accept int8 weights.
   - Full tier: only MatMul/Gemm are quantised (no ConvInteger).
-  - Light tier: Conv is quantised as well (`--quantise-conv`), to get under 100 MB.
+  - Light tier: Conv is quantised as well, except the first CNN conv (`--quantise-conv --quant-exclude conv_layers.0/`),
+    to get under 100 MB.
 - Manifest names are flat (`light-model.onnx`, `light-vocab.json`), because Flutter does not bundle
   subfolders of `assets/models/`.
 
@@ -113,9 +116,196 @@ tools/models/reproduce.sh release   # manifest + SHA256SUMS for both tiers (dry 
 - If PER is poor, add LibriSpeech train-clean-100 (CC-BY-4.0, about 100 h, mostly American) to the training
   data. Keep RP labels and VCTK for validation.
 
+## Light tier without GPU (CPU distillation)
+
+The owner has no GPU, so the light tier was built a different way: the full model was
+**distilled** into a smaller copy of itself on a laptop CPU. No hand labels and no GPU were
+used. Code: `tools/models/distill.py`; one-command rebuild: `tools/models/reproduce.sh light-cpu`.
+
+### Survey: is there a small model we could ship as is?
+
+I spent about an hour on this, on 2026-10-20. Licences were read from the model cards and repositories.
+
+| Candidate | Size | Licence / data | Fits A2/A3? | Verdict |
+| --- | --- | --- | --- | --- |
+| Peacockery/hubert-base-phoneme-en @ `132c332` | 95 M | Apache-2.0; LibriSpeech 960 h (CC-BY-4.0) | Same I/O as wav2vec2 (`input_values` → 20 ms logits). Vocab is **39 ARPAbet** phones: no ə/ʌ split, no LOT ɒ, no British diphthongs, no r-coloured units. A3's table and I2's calibration would need redoing. | Usable fallback. Measured on our 60 held-out clips with everything collapsed to ARPAbet: **PER 10.3%**, against 7.1% for the full model. |
+| ZIPA-CR-small (lingjzhu/zipa) | 64 M | Code MIT. Weights CC-BY-4.0, except the `ns` variants, which are CC-BY-NC-SA. Data: IPAPack++. | Zipformer on fbank features with its own IPA vocab and frame rate. A2's input contract and A3's mapping would both change. | Not drop-in. Worth a look if A2 ever adds an fbank front end. |
+| bookbot/wav2vec2-ljspeech-gruut and its copy ct-vikramanantha/phoneme-scorer-v2 | 94 M | Apache-2.0; LJSpeech (public domain) | gruut en-us IPA | Rejected: trained on a single speaker. |
+| bobboyms/wav2vec2-base-en-phoneme-ctc-41h | 95 M | Apache-2.0; training data "unknown" | ARPAbet | Rejected: the data licence cannot be checked. |
+| Peacockery/citrinet-256-phoneme-en | 10 M | MIT; LibriSpeech-100 | NeMo mel front end, ARPAbet, WER 23% | Rejected: not wav2vec2 I/O, weak. |
+| *-timit-*, L2-ARCTIC fine-tunes (vitouphy, excalibur12, mrrubino, speech31, …) | 95–300 M | TIMIT (LDC) or L2-ARCTIC (CC BY-NC) | – | Rejected: data licence. |
+| facebook/wav2vec2-xlsr-53-espeak-cv-ft | 300 M | Apache-2.0 | same vocab family | Same size as the full model. |
+| Allosaurus | – | GPL-3.0 | – | Rejected: licence. |
+
+No small model ships under a clean licence with our eSpeak vocab, so I chose distillation. The HuBERT
+ARPAbet model is the fallback if distillation had failed.
+
+### Method
+
+- **Teacher**: the full tier, `facebook/wav2vec2-lv-60-espeak-cv-ft` (fp32 PyTorch).
+- **Student**: a layer-dropped copy of the teacher, initialised from it. It keeps:
+  - the CNN feature encoder (frozen);
+  - the feature projection and positional conv;
+  - transformer layers **0, 4, 8, 12, 16, 20** of 24, plus the final layer norm;
+  - the CTC head.
+
+  That is 89.1 M parameters (the teacher has 315 M). The vocab is the same 392 tokens with the same
+  strings (`light-vocab.json` is byte-identical to `full-vocab.json`), so A3's map and I2's
+  calibration (`extraAccepted` for en-us symbols) apply unchanged.
+  - Layer choice: before training, every candidate (even spacings ending at 20 or 23, top-heavy and
+    bottom-heavy sets, 4 or 8 layers) outputs only blanks. Even spacing ending at 20 had the lowest
+    KL to the teacher.
+- **Teacher pass, done once**: each training clip goes through the teacher alone, without padding,
+  exactly as on device. The frozen CNN output (512 × 50/s) and the teacher's per-frame log-posteriors
+  (392 × 50/s) are cached as float16 (`FrameCache`: about 330 MB per hour of audio). Training then
+  never touches raw audio or the CNN, which saves about a quarter of the student's compute and all
+  of the teacher's.
+- **Loss**: per-frame KL(teacher ‖ student) at T = 1, averaged over real frames. Optional CTC on
+  the teacher's greedy labels is supported (`--ctc-weight`) but was not used.
+- **Training settings**:
+  - SpecAugment time masking p = 0.05 on the student input only;
+  - dropout 0.05;
+  - AdamW, lr 2e-4, 50 warm-up steps, cosine decay to 5% over 1,200 steps;
+  - length-bucketed batches of at most 1,600 frames (about 32 s of audio);
+  - gradient clip 1.0;
+  - 4 threads; a checkpoint every 30 min; restarting the same command resumes.
+- **Data** (VCTK 0.92, CC-BY-4.0). No held-out speaker (p225, p227, p228, p229, p232) and no I2
+  eval speaker (p231, p232) is used.
+
+  | Set | Speakers | Clips | Audio (trimmed) |
+  | --- | --- | --- | --- |
+  | a | every non-held-out speaker in shards 10/22/32/33: p239, p250, p279 (English); p241 (Scottish); p292, p364 (Irish); p299, p318, p360 (American); p376 (Indian) | 2,952 | 1.55 h |
+  | b | English-accent speakers in shards 11/12/24/31: p243 (London), p250 (SE), p254 (Surrey), p267 (Yorkshire), p268 (Southern), p270 (Yorkshire), p273 (Suffolk), p274 (Essex), p279 (Leicester) | 3,088 | 1.83 h |
+
+  That is 6,040 clips, 3.36 h in total. The other accents are kept on purpose: the student
+  only has to copy the teacher, and learners will not have Southern English accents. A third
+  set (p244, p257, p258 from shards 16/20, about 1 h) was extracted but dropped to fit one night.
+
+### Wall clock on this machine
+
+Measured on 2026-10-20 on an i5-8350U laptop (4 cores, AVX2, no AVX-512, no GPU) under WSL2,
+with 4 threads per job. Another agent shared the CPU for most of the day.
+
+| Step | Time |
+| --- | --- |
+| Downloads (teacher checkpoint 1.26 GB + 6 VCTK shards) | about 30 min |
+| Teacher pass, 3.4 h of training audio + 60 held-out clips | 4.4 h (RTF 0.6 on a quiet machine, 1.8 while shared) |
+| Training: 1,200 steps, about 3 passes over the data | 7.4 h (13:51 → 21:18) |
+| Export + uint8 quantisation | 10 s |
+
+### Results (held-out VCTK, never seen in training)
+
+Same 60 clips as the full-tier table above: 15 each from p225, p227, p228, p229.
+Report: `work/export/report.json` (en-us) and `work/export-rp/report.json` (RP).
+
+| Measure | Full tier (shipped, uint8) | **Light tier (distilled, uint8)** |
+| --- | --- | --- |
+| Size | 355.4 MB | **89.7 MB** (fp32 356.6 MB) |
+| Parameters / transformer layers | 315 M / 24 | 89.1 M / 6 |
+| PER, `en-us` references (strict / loose) | 8.61% / 8.43% | **24.5% / 23.7%** (fp32 23.9% / 23.2%) |
+| PER, `en-gb-x-rp` references (strict / loose) | 16.2% / 15.0% | 29.1% / 28.1% |
+| Frame argmax agreement with the full model (uint8 vs uint8) | – | **89.1%** (fp32 student vs fp32 teacher: 89.8%) |
+| Greedy decode distance to the full model's decode | – | 21.4% |
+| uint8 vs fp32 of the same model: argmax agreement | 99.2% | 97.7% |
+| CPU time for 20 s of audio, 1 thread (same quiet machine, back to back) | 8.5 s | **3.4 s** |
+| CPU time for 20 s of audio, 4 threads | 4.7 s | **2.0 s** |
+| I2 harness, native VCTK false red (250 clips, 2,135 words, default `ScoringConfig`) | 3.6% | **7.1%** (gate < 5%: **fails**) |
+| I2 harness: green / amber / missed | 92.6% / 3.8% / 0.5% | 81.7% / 11.2% / 2.3% |
+| I2 probes: word swaps red / phoneme substitutions red | 99.6% / 78.8% | 99.6% / 68.0% |
+| I2 harness model time (A2's Dart runtime, median RTF) | 0.38 | 0.20 (about 5 s for a 25 s passage on 4 desktop threads) |
+
+The I2 harness loaded `light-model.onnx` through A2's real `OnnxPhonemeRecognizer`, so the file works
+on the CPU execution provider with A2's loader.
+
+Training curve, measured on the held-out clips against the cached fp32 teacher:
+
+| Step | 100 | 300 | 500 | 800 | 1,000 | 1,200 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Frame agreement | 83.4% | 87.8% | 88.6% | 89.4% | 89.7% | 89.8% |
+| Distance to the teacher's decode | 43.9% | 28.3% | 23.3% | 21.1% | 20.4% | 20.1% |
+
+**Verdict: usable as a stopgap, not good enough to be the default scorer.**
+
+- It is 4x smaller and about 2.4x faster than the full tier, and it fits the < 100 MB bundle.
+- It still catches whole-word errors as well as the full tier: 99.6% of swaps go red.
+- But it makes about three times as many phoneme errors (24.5% against 8.6% PER).
+- It also doubles the native false-red rate (7.1% against 3.6%), above I2's 5% gate.
+- The curve was still improving slowly at the end (about 1 point of decode distance per 200 steps). The main limits are
+  the amount of data (3.4 h, about 3 passes) and the 6-layer size.
+
+Next steps, cheapest first:
+
+1. **Ship it only as the fallback for slow devices**, and have I2 re-calibrate `ScoringConfig` for the light tier
+   (`tools/eval/calibrate.py` on this model's posteriors), since the GOP margins are softer.
+2. **More data and more time on CPU.** Add set c and more VCTK or LibriSpeech (CC-BY-4.0) audio, then run 2–3 more
+   nights. `distill.py` resumes, and new caches can be added with `--cache`. The teacher pass costs about 0.6 h per hour
+   of audio and training about 0.25 h per hour of audio per pass on a quiet machine.
+3. **A free notebook GPU** (Kaggle, see below): run the same distillation with far more data, or the original
+   wav2vec2-base fine-tune. That is the most likely way to reach the full tier's accuracy at this size.
+4. **Fallback model**: Peacockery/hubert-base-phoneme-en (10.3% PER in ARPAbet space; see the survey). It would need an
+   ARPAbet mapping in A3 and a new calibration.
+
+### Quantisation choice
+
+Sizes of the 6-layer student, measured:
+
+| Variant | Size |
+| --- | --- |
+| fp32 | 356.6 MB |
+| uint8 MatMul only | 127.4 MB (too big) |
+| uint8 MatMul + positional conv only | 102.2 MB (too big) |
+| uint8 MatMul + all Conv | 89.65 MB |
+| **uint8 MatMul + all Conv except the first CNN conv (shipped)** | **89.66 MB** |
+
+The first CNN conv (5 k weights) works directly on raw audio. Quantising it causes most of
+the ConvInteger loss. On the full model, which has the same CNN, frame argmax agreement with fp32
+is 96.5% with every Conv quantised and 97.9% with `conv_layers.0` kept in float32. Keeping
+`conv_layers.1` as well only reaches 98.0%. Use `--quantise-conv --quant-exclude conv_layers.0/`.
+All weights are uint8 (QUInt8), so the file loads on the ONNX Runtime CPU EP (MatMulInteger +
+ConvInteger), as A2 requires.
+
+### Optional: the original GPU fine-tune on a free notebook GPU
+
+The distilled model needs no GPU. The original plan (fine-tune `facebook/wav2vec2-base` on RP
+labels, `reproduce.sh light`) can still be run for free on Kaggle Notebooks or Google Colab.
+Nothing in the pipeline depends on it. Quotas change, so check them first. At the time of
+writing:
+
+- Kaggle gives about 30 GPU hours a week (T4 x2 or P100) and sessions of up to 12 h. GPU and
+  internet access need a phone-verified account.
+- Colab's free tier gives a T4 when one is available. Sessions are shorter and can be cut off
+  without warning.
+
+`train_light.py` saves only at the end, so use Kaggle (longer, more predictable sessions) and
+size the run to fit one session. On a T4 (fp16), 20,000 steps at batch 16 should take roughly
+4–8 h, which is 2–3x the A10G estimate above. Use `STEPS=8000` if the session might end early.
+
+Kaggle notebook cells (Settings: Accelerator = GPU, Internet = on):
+
+```bash
+!apt-get -qq install -y espeak-ng > /dev/null
+!git clone https://github.com/OWNER/REPO.git coach && cd coach && git checkout <commit>
+# If the repo is private, add a GITHUB_TOKEN secret (Add-ons > Secrets) and clone with
+# https://$GITHUB_TOKEN@github.com/OWNER/REPO.git, or upload tools/models as a Kaggle dataset.
+%cd coach
+!pip -q install transformers==5.20.1 onnx==1.23.2 onnxruntime==1.31.0 safetensors==0.8.0 \
+    huggingface_hub==2.2.0 soundfile==0.14.0 pyarrow==26.0.0 numpy pytest   # keep Kaggle's CUDA torch
+!mkdir -p tools/models/release/full && python -c "from huggingface_hub import hf_hub_download as h; \
+import shutil; shutil.copy(h('facebook/wav2vec2-lv-60-espeak-cv-ft', 'vocab.json', \
+revision='ae45363bf3413b374fecd9dc8bc1df0e24c3b7f4'), 'tools/models/release/full/vocab.json')"
+!PY=python SKIP_SETUP=1 STEPS=20000 tools/models/reproduce.sh light
+!tar czf /kaggle/working/light.tgz tools/models/work/light/hf tools/models/release/light tools/models/work/light/report.json
+```
+
+Then download `light.tgz` from the notebook's Output tab. On your machine, unpack it, run the
+`tools.models.evaluate` and `tools.models.release` steps, and compare the report with the
+distilled model's (same held-out set, `--ref-voice en-us` for a like-for-like comparison).
+On Colab the cells are the same, run from `/content`. Mount Google Drive and copy
+`tools/models/work/light` there regularly, because a disconnect loses the VM.
+
 ## Reproducing everything
 
-`tools/models/reproduce.sh {full|light-smoke|light|release}`. It needs Python 3.12, about 6 GB of RAM for the
+`tools/models/reproduce.sh {full|light-smoke|light|light-cpu|release}`. It needs Python 3.12, about 6 GB of RAM for the
 full export, and eSpeak NG on PATH (or `ESPEAK_NG=/path/to/espeak-ng`). Individual steps:
 
 ```bash
@@ -151,19 +341,26 @@ After publishing, A2 copies `tools/models/release/manifest.json` to `assets/mode
 (`tools/ci/fetch_models.py`, `integration.yml`) then downloads each file, checks its SHA-256 and caches it.
 Light files are marked `bundle: true` (copied into `assets/models/`); full files are only cached.
 
-Current full-tier checksums (local release folder):
+Current checksums. The local release folder is `/home/idawud/coach-models/light-cpu/release/`, with the full tier
+hard-linked in. Its `manifest.json` and `SHA256SUMS` were written by the dry run; light files are `bundle: true`.
 
 ```
-61335ed80ca55f52bf33b24cfa36fcfe872a57ac3261c284ba62a5d0bbe26e93  full-model.onnx  (355,431,615 B)
-6792ce4bae9994ecae2d6d2c9259a539d0efd8cb7aa7f8e3f657a0d8e0ee66dd  full-vocab.json  (5,032 B)
+61335ed80ca55f52bf33b24cfa36fcfe872a57ac3261c284ba62a5d0bbe26e93  full-model.onnx   (355,431,615 B)
+6792ce4bae9994ecae2d6d2c9259a539d0efd8cb7aa7f8e3f657a0d8e0ee66dd  full-vocab.json   (5,032 B)
+ee06d16a7206fee53f760109c163b06ce3c3be0b4222bc7309aaca3a9a7fe61c  light-model.onnx  (89,664,247 B)
+6792ce4bae9994ecae2d6d2c9259a539d0efd8cb7aa7f8e3f657a0d8e0ee66dd  light-vocab.json  (5,032 B, identical to full)
 ```
+
+To publish (a human decision; not done):
+`python -m tools.models.release --release-dir /home/idawud/coach-models/light-cpu/release --repo OWNER/REPO --tag models-v1 --publish`
 
 ## Models and datasets with licences
 
 | Item | Used for | Licence | Source (pinned) | Shipped? |
 | --- | --- | --- | --- | --- |
 | facebook/wav2vec2-lv-60-espeak-cv-ft | full tier (weights unchanged, re-exported) | Apache-2.0 | huggingface.co/facebook/wav2vec2-lv-60-espeak-cv-ft @ `ae45363` | yes (download) |
-| facebook/wav2vec2-base | light tier starting point | Apache-2.0 | huggingface.co/facebook/wav2vec2-base @ `0b5b8e8` | yes, fine-tuned (bundled) |
+| facebook/wav2vec2-lv-60-espeak-cv-ft (as teacher and initialisation) | distilled light tier (6 of its 24 layers, retrained) | Apache-2.0 (pre-trained on LibriLight, fine-tuned on Common Voice CC0) | same pin `ae45363` | yes, distilled (bundled) |
+| facebook/wav2vec2-base | GPU-alternative light tier starting point | Apache-2.0 | huggingface.co/facebook/wav2vec2-base @ `0b5b8e8` | only if the GPU route is used |
 | CSTR VCTK Corpus 0.92 (Yamagishi, Veaux, MacDonald; University of Edinburgh) | light-tier training data; held-out evaluation and the 20 logits-check clips | CC-BY-4.0 (attribution required) | datashare.ed.ac.uk/handle/10283/3443 via the silence-trimmed Parquet mirror `jspaulsen/vctk` @ `fb74847` | no (only the trained weights ship) |
 | LibriSpeech (optional extra training data) | light tier, if needed | CC-BY-4.0 | openslr.org/12 | no |
 | eSpeak NG | IPA labels and PER references, run as a binary in `tools/` only | GPL-3.0 | system package | no, never shipped or linked |
