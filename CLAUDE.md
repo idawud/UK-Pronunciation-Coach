@@ -20,7 +20,7 @@ Flutter + Dart (null-safe), Riverpod, go_router, freezed + json_serializable, dr
 1. **Stay in your folders.** Only create or edit files your agent ID owns (table below). Need a contract change? Don't edit it: write the proposal in `docs/contract-requests/<agent-id>.md`.
 2. **Contracts and models are frozen** after Wave 0: `lib/core/contracts/`, `lib/core/models/`. Code against the interfaces, never another agent's implementation. Use `lib/core/fakes/` for dependencies.
 3. **Offline and private.** No paid or cloud APIs, no runtime network calls (sole exception: A2's one-time full-model download over Wi-Fi). No analytics, tracking or crash-reporting SDKs. No user data leaves the phone.
-4. **Licences.** Ship only Apache-2.0, MIT, BSD or similar. Never ship GPL/AGPL code. eSpeak NG is allowed **only** in `tools/`. Never use BEEP or any research-only / non-commercial lexicon. Record every model, dictionary and voice in `docs/licences.md`.
+4. **Licences.** Ship only Apache-2.0, MIT, BSD or similar. Never ship GPL/AGPL code. Only approved exception: `desugar_jdk_libs` (GPL-2.0 with the Classpath Exception, required by Android core library desugaring; approved 2026-10-20). eSpeak NG is allowed **only** in `tools/`. Never use BEEP or any research-only / non-commercial lexicon. Record every model, dictionary and voice in `docs/licences.md`.
 5. **Testing is part of done.** See `docs/testing.md` and the gates below. Never skip or delete a failing test to get green; fix it, or record why in your handoff note.
 6. **No large binaries in git.** Model files go to GitHub Release assets with a SHA-256 manifest.
 7. **Finish** with `docs/handoff/<agent-id>.md`: what you built, how to use it, known gaps.
