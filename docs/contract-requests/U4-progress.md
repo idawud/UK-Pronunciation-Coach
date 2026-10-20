@@ -3,7 +3,11 @@
 No change to `lib/core/contracts/` or `lib/core/models/` is needed. These requests are
 for files U4 does not own (CI allowlist, `android/`, `ios/`, `lib/core/providers.dart`).
 
-## 1. Allow `dbus` (MPL-2.0) so reminders can use flutter_local_notifications
+## 1. Allow `dbus` (MPL-2.0) so reminders can use flutter_local_notifications: DONE
+
+**Done 2026-10-20** (feat/reminders-mpl): owner-approved; `dbus` and `nm` are in
+`tools/ci/licence_allowlist.txt` and `LocalNotificationsReminderScheduler` is the
+default on Android / iOS. See docs/handoff/U4-progress.md.
 
 **What:** add `dbus  # MPL-2.0, Linux-only transitive of flutter_local_notifications_linux / file_picker_linux; not built into the Android or iOS app` to `tools/ci/licence_allowlist.txt` (W0 owns it).
 
@@ -47,7 +51,10 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
 
 Use **inexact** alarms: a practice reminder does not need `SCHEDULE_EXACT_ALARM`.
 
-## 2. Native setup for notifications (R1 / I1, after request 1)
+## 2. Native setup for notifications (R1 / I1, after request 1): DONE
+
+**Done 2026-10-20**: desugaring (`desugar_jdk_libs` 2.1.4, GPL-2.0 with Classpath
+Exception, flagged in docs/licences.md), boot permission and receivers, iOS delegate.
 
 - Android `android/app/build.gradle(.kts)`: `isCoreLibraryDesugaringEnabled = true`
   and `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.x")`
@@ -59,7 +66,11 @@ Use **inexact** alarms: a practice reminder does not need `SCHEDULE_EXACT_ALARM`
 - iOS `AppDelegate.swift`: set `UNUserNotificationCenter.current().delegate` as in the
   plug-in README so the reminder shows while the app is open.
 
-## 3. File save / pick (export and import)
+## 3. File save / pick (export and import): registration confirmed
+
+**2026-10-20**: the generated Dart plug-in registrant registers both implementations
+without `file_picker`; kept as is (see the U4 handoff). The save / open round trip
+still needs a device.
 
 `BackupFiles` (`lib/ui/settings/backup_files.dart`) uses file_picker's federated
 packages directly (`file_picker_platform_interface`, `android_file_picker`,
@@ -72,7 +83,10 @@ implementations register through `dartPluginClass` without the `file_picker` app
 package, and that saving a `.json` with `application/json` works on both platforms.
 If not, add `file_picker` once request 1 is approved.
 
-## 4. Wiring (I1)
+## 4. Wiring (I1): reminder part DONE
+
+**2026-10-20**: `reminderRestoreProvider` re-schedules on start-up (listened to in
+`CoachApp`). The other bullets are unchanged.
 
 - `reminderSchedulerProvider` and `backupFilesProvider` live in
   `lib/ui/settings/`. I1 may bind them from `lib/core/providers.dart` instead.

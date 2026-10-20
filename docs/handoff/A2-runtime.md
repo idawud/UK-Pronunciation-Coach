@@ -53,10 +53,9 @@ Other packages A2 added (licence files read from the pub cache): `ffi` 2.2.0, `c
 3.0.7, `path_provider` 2.1.6 (+ platform packages), `device_info_plus` 13.3.0 (+
 platform interface, `win32`, `win32_registry`): all **BSD-3-Clause**. Transitive:
 `petitparser`, `xml` are MIT; `code_assets`, `hooks`, `jni*`, `objective_c`,
-`record_use`, `xdg_directories` are BSD-3. **`connectivity_plus` was added and then
-removed.** Its Linux-only dependencies `nm` and `dbus` are MPL-2.0, which
-`check_licences.py` reads as AGPL. The Wi-Fi check is now pure `dart:io`
-(`InterfaceNetworkMonitor`); see contract request 1.
+`record_use`, `xdg_directories` are BSD-3. **`connectivity_plus` (BSD-3) is back**
+(7.3.2, 2026-10-20): the owner approved its Linux-only MPL-2.0 dependencies `nm` and
+`dbus` in `tools/ci/licence_allowlist.txt` (contract request 1, done).
 
 ## pubspec edits (ownership exception)
 
@@ -183,9 +182,9 @@ any device that takes more than 170 ms to run the light model on 5 s of audio.
 - **On-device tests not run.** There is no Android SDK, emulator or Xcode here, and
   no `linux/` desktop runner. `integration_test/A2-runtime/` is analysed only. The
   iOS symbol-linking risk is in contract request 4.
-- **Wi-Fi detection is a heuristic** (contract request 1): it polls interfaces every
-  5 s, can't see metered Wi-Fi, and Android's `NetworkInterface.list` behaviour on
-  every vendor is unverified.
+- **Metered Wi-Fi is not detected.** `ConnectivityNetworkMonitor` (see "Update
+  2026-10-20") fixes the hotspot and Wi-Fi-without-internet cases, but neither it nor
+  the `dart:io` fallback sees Android's "metered" flag or iOS Low Data Mode.
 - **Performance target not met on this CPU** (see the benchmark); it needs measuring
   on real phones.
 - Bundling: copying the light model out of the asset bundle loads it fully into
@@ -193,7 +192,32 @@ any device that takes more than 170 ms to run the light model on 5 s of audio.
 - `dev_model_test.dart` takes ~40 s and runs inside `check.sh` whenever the dev model
   is cached; CI skips it.
 - Contract requests (`docs/contract-requests/A2-runtime.md`):
-  1. allowlist or confirm the `connectivity_plus` removal;
+  1. ~~allowlist or confirm the `connectivity_plus` removal~~ done: approved,
+     restored;
   2. A4 model format: uint8 quantisation, I/O names, flat bundled names;
   3. `docs/licences.md` ORT row;
   4. iOS / Android native notes.
+
+## Update 2026-10-20: connectivity_plus restored (feat/reminders-mpl)
+
+- **Why restore it.** Evidence from the plug-in source (`connectivity_plus` 7.3.2):
+  Android asks `ConnectivityManager.getNetworkCapabilities(getActiveNetwork())` for
+  the transport of the *active* network; iOS uses `NWPathMonitor.usesInterfaceType`.
+  So it answers "what carries traffic now", which the `dart:io` interface list cannot:
+  a phone serving a hotspot (Wi-Fi interface up, data over mobile) or joined to a
+  Wi-Fi without internet (Android falls back to mobile) looked unmetered before. It
+  also pushes changes instead of polling every 5 s. **It does not see Android's
+  metered-Wi-Fi flag** (it never reads `NET_CAPABILITY_NOT_METERED`) nor iOS
+  `isExpensive` / Low Data Mode; the request's hope that it would was not borne out.
+- **What changed.** `lib/engine/runtime/network.dart`: `ConnectivityNetworkMonitor`
+  (unmetered = active network is Wi-Fi or Ethernet and not mobile; only VPN / other /
+  Bluetooth -> ask the fallback; plug-in `PlatformException` /
+  `MissingPluginException` -> fallback) and `platformNetworkMonitor()` (connectivity
+  monitor with `InterfaceNetworkMonitor` fallback on Android / iOS, interface monitor
+  elsewhere). `OnnxPhonemeRecognizer.create` uses `platformNetworkMonitor()`.
+  `NetworkMonitor` and `lib/core/contracts` are unchanged.
+- **Tests.** `test/engine/runtime/network_test.dart`: classification, fallback,
+  plug-in errors, de-duplicated change stream, platform choice.
+  `integration_test/A2-runtime/network_monitor_device_test.dart`: the plug-in is
+  registered and answers on a device (no traffic; passes with the network off).
+- **Native.** None: `ACCESS_NETWORK_STATE` was already declared.
