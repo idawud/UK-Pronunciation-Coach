@@ -147,13 +147,51 @@ void main() {
     expect((await profile(tester)).reminderMinutes, isNull);
   });
 
+  testWidgets('a failing scheduler shows a message and keeps the setting', (
+    tester,
+  ) async {
+    reminders = RecordingReminderScheduler(fail: true);
+    await pump(tester);
+    await tester.tap(find.text('Daily reminder'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("couldn't be set"), findsOneWidget);
+    expect((await profile(tester)).reminderMinutes, isNull);
+  });
+
+  testWidgets('a failing scheduler keeps the old reminder time', (
+    tester,
+  ) async {
+    await tester.runAsync(
+      () => repo.saveProfile(const UserProfile(reminderMinutes: 480)),
+    );
+    reminders = RecordingReminderScheduler(fail: true);
+    await pump(tester);
+    await tester.tap(find.text('Reminder time'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("couldn't be set"), findsOneWidget);
+    expect((await profile(tester)).reminderMinutes, 480);
+  });
+
+  testWidgets('switching off still works when cancelling fails', (
+    tester,
+  ) async {
+    await tester.runAsync(
+      () => repo.saveProfile(const UserProfile(reminderMinutes: 480)),
+    );
+    reminders = RecordingReminderScheduler(fail: true);
+    await pump(tester);
+    await tester.tap(find.text('Daily reminder'));
+    await tester.pumpAndSettle();
+    expect(reminders.cancelCount, 1);
+    expect((await profile(tester)).reminderMinutes, isNull);
+  });
+
   testWidgets('reminder is disabled when unsupported', (tester) async {
     reminders = RecordingReminderScheduler(supported: false);
     await pump(tester);
-    expect(
-      find.textContaining('not available in this version'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('available on Android and iOS'), findsOneWidget);
     final tile = tester.widget<SwitchListTile>(
       find.widgetWithText(SwitchListTile, 'Daily reminder'),
     );
@@ -455,6 +493,22 @@ void main() {
       expect((await profile(tester)).level, 1);
       expect(await tester.runAsync(() => repo.attempts()), isEmpty);
       expect(reminders.cancelCount, 1);
+      expect(find.text('All your data was deleted.'), findsOneWidget);
+    });
+
+    testWidgets('deletes all data even when cancelling the reminder fails', (
+      tester,
+    ) async {
+      await tester.runAsync(
+        () => repo.saveProfile(const UserProfile(level: 3)),
+      );
+      reminders = RecordingReminderScheduler(fail: true);
+      await pump(tester);
+      await tester.tap(find.text('Delete all data'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete everything'));
+      await tester.pumpAndSettle();
+      expect((await profile(tester)).level, 1);
       expect(find.text('All your data was deleted.'), findsOneWidget);
     });
   });
