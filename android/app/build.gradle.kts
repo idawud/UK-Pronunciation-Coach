@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "uk.pronunciationcoach.uk_pronunciation_coach"
-    compileSdk = flutter.compileSdkVersion
+    // 37 instead of Flutter's default (36): permission_handler_android 14.x requires it.
+    // targetSdk stays on Flutter's default.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
