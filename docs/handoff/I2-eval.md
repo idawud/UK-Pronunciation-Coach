@@ -1,4 +1,73 @@
-# Handoff: I2-eval (engine-spike version)
+# Handoff: I2-eval
+
+## Update 2026-10-20: synthetic British-voice labels (branch feat/i2-synth-eval)
+
+No teacher will be paid, so the default accuracy gate now uses synthetic labels.
+British TTS voices read the eval sentences from phonemes, once as written and once with
+1–3 injected learner errors, so each word's right/wrong label is known by construction.
+Full numbers are in docs/eval-report.md, "Synthetic British-voice evaluation".
+
+**What I built** (`tools/eval/synth/`, 100% pytest coverage, ruff clean):
+
+- `voices.py`: the voice registry and pinned files with SHA-256, plus the Kokoro and
+  Piper ONNX engines.
+  - Kokoro-82M British voices (Apache-2.0) and Piper cori medium/high (MIT).
+  - Licences were checked at the source; see `tools/eval/SOURCES.md`.
+- `phonemes.py`: Britfone SSBE to Kokoro misaki-GB symbols and to eSpeak `en` (Piper).
+- `sentences.py` + committed `sentences.tsv`: 200 app sentences and 100 VCTK texts.
+- `inject.py`: the error catalogue from `tips_table.dart` and common errors. This covers
+  substitutions, an added r, a dropped final consonant, h-dropping, an added h and
+  moved stress.
+- `augment.py`: speed, padding, synthetic noise at 10–30 dB, reverb and a phone band
+  (numpy only).
+- `build.py`: `fetch` / `sentences` / `plan` / `synth` / `status` / `subset`.
+  - It writes `passages.json`, `manifest.tsv`, `labels.csv` (agreement.py format plus
+    error/voice/split/read/aug columns), `items.tsv` and WAVs into the git-ignored
+    `tools/eval/data/synth/`.
+- `report.py`: agreement, kappa, the always-right baseline, per split/voice/read/
+  augmentation, per-error-type detection and clean-read false red.
+  - It gates the held-out voices at 80% (optional `--min-kappa`).
+- `calibrate.py`: a word-score grid search on the tuning voices, capped by native VCTK
+  false red.
+- `run_harness.sh`: runs every gate (native, synthetic, optional teacher) and fails if
+  any failed. `EVAL_SYNTH_BUILD=1` synthesises; `EVAL_SYNTH_PARTIAL=1` scores a partial
+  build.
+- `eval.yml`: restores the synthetic audio from cache. It synthesises only on manual
+  runs with `build_synth` (voices cached; timeout 360 min), so weekly runs without the
+  cache skip.
+- `LABELLING.md`: synthetic labels are the default, and teacher labels are optional.
+
+**Results** (3,600 clips, 30,228 words, current defaults):
+
+- Held-out voices (bm_george, bf_isabella, cori): 87.4% agreement, kappa 0.26.
+  - 23.7% of injected errors come out red.
+  - 3.4% false red on right words.
+- All voices: 87.5% agreement, kappa 0.25. Clean reads: 3.1% red.
+- An engine that marks every word right would also agree 87.4%.
+- VCTK native re-run: 3.6% false red (held out 3.7%), unchanged.
+- Calibration is **unchanged**:
+  - the kappa-optimal config under the VCTK cap is the current default;
+  - the agreement-optimal one is more lenient and catches fewer errors.
+- Interim verdict: the 80% gate passes on paper, but my verdict is **NO-GO on
+  accuracy**, because kappa is low and the engine catches fewer than 1 in 4 clean,
+  deliberate errors.
+
+**Known gaps**:
+
+- **It's a proxy.** TTS voices make clean substitutions with no accent, so the result
+  can be off in either direction.
+- The model's `heard` shows the injected sound in only 38% of substitutions. TTS
+  realisation and model bias can't be separated without a listener.
+- Tuning voices read a third of the sentences each, because of the CPU budget
+  (Kokoro ONNX runs at about real time per core here).
+- Piper output is not deterministic (VITS noise), so cori clips differ slightly between
+  re-renders.
+- `eval.yml` was checked as YAML/logic only, not run on GitHub.
+- `docs/licences.md` rows were requested in contract request 4 (I don't own that file).
+
+---
+
+## Engine-spike version (2026-10-19)
 
 I built the accuracy harness, a native-British eval set with controlled-error probes, a
 calibration of `ScoringConfig`, the teacher-labelling kit and `eval.yml`. The numbers

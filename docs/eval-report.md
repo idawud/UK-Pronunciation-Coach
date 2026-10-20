@@ -13,14 +13,17 @@ README).
 | Does the engine leave native Southern British speech alone? | **Yes, after calibration.** 3.6% of native words are red (target < 5%). On the 2 held-out speakers it is 3.7%. Before calibration it was 28.6%. |
 | Does it catch known errors? | **Mostly (proxy).** 99.6% of word swaps and 79% of single-phoneme substitutions come out red; 91% of substitutions are not green. |
 | Does it agree with a teacher on learner speech (the ≥ 80% gate)? | **Unknown.** No teacher labels exist yet. The template, instructions and script are ready. |
+| Does it agree with synthetic labels (the proxy gate, 2026-10-20)? | **The 80% number passes, but it means little.** 87.4% word agreement on held-out TTS voices, the same as marking every word right (87.4%). Kappa is 0.26 and only 24% of injected errors come out red. See "Synthetic British-voice evaluation" below. |
 | Is it fast enough? | **Not with the full tier on this CPU.** The median real-time factor is 0.38, so a 25 s passage takes roughly 8–10 s on 4 x86 threads. Real phones and the light tier still need measuring. |
 
 **Recommendation: conditional GO for the engine spike.** The scoring pipeline works on real
 speech, and a calibration exists that keeps native speakers out of red. It also still
 flags most controlled errors. The **release** go/no-go still depends on 3 things:
 
-1. The teacher agreement run, with 5 learners x 50 sentences (≥ 80% word agreement).
-   This is the real gate, and nothing here replaces it.
+1. Word agreement ≥ 80%. With no teacher, the default gate is now the synthetic
+   British-voice proxy (section below): it passes on raw agreement, but kappa is only
+   0.26 and fewer than 1 in 4 injected errors are caught, so my interim release verdict
+   on accuracy is NO-GO. Teacher labels on learner speech remain the better test (optional).
 2. Pronunciation variants and weak forms in the content and scorer (contract request 2).
    Without them, about 2 points of the remaining false red come from correct native
    forms. I expect learners to hit them even more often.
@@ -32,7 +35,163 @@ Starting Wave 1 screens is reasonable, provided the teacher labels are collected
 parallel. If agreement falls short of 80%, the likely fixes are calibration and lexicon
 work (`tools/eval/calibrate.py`), not changes to the screens.
 
-## Method
+## Synthetic British-voice evaluation (2026-10-20)
+
+The owner will not pay a teacher, so the default accuracy gate now uses **synthetic
+labels**. British TTS voices read each eval sentence from phonemes. They read it once as
+written and once with 1–3 injected learner errors. A word is `wrong` when we changed its
+phonemes and `right` otherwise, so every label is known by construction. The real engine
+(the same full-tier model and the current default `ScoringConfig`) then scores the audio.
+
+**This is a proxy, not teacher agreement.** TTS voices are not learners. The errors are
+clean, whole-phoneme substitutions in an otherwise native voice. There is no accent, no
+in-between sound, no hesitation and no L1 transfer across the whole sentence. The voice
+also may not produce every injected sound faithfully (see "Weak spots"). Real learner
+speech is harder in some ways (accented "right" words, which raise false red) and easier
+in others (errors often come in clusters). I would not trust the headline number in
+either direction.
+
+### Method
+
+- **Voices** (licences checked at the source, details in `tools/eval/SOURCES.md`):
+  - Kokoro-82M v1.0 (hexgrad), Apache-2.0, trained on permissive or public-domain data.
+    All 8 British voices: `bf_alice`, `bf_emma`, `bf_isabella`, `bf_lily`, `bm_daniel`,
+    `bm_fable`, `bm_george`, `bm_lewis`. ONNX export from onnx-community, pinned by
+    SHA-256.
+  - Piper `en_GB-cori-medium` and `-high` (MIT). Trained from scratch on public-domain
+    LibriVox audio, a different engine and a real reader's voice.
+  - Both run on onnxruntime from **phoneme input**. `tools/eval/synth/phonemes.py` maps
+    Britfone SSBE to Kokoro's misaki-GB symbols (`A`, `I`, `Q`, `ʧ`, TRAP `a`, SQUARE
+    `ɛː`) and to Piper's eSpeak `en` symbols, with tests. No text front-end and no GPL
+    code are used. Nothing ships.
+- **Held-out voices**: `bm_george` (M), `bf_isabella` (F) and cori (F, both
+  qualities). Every tuning step used the other 6 Kokoro voices only.
+- **Sentences** (`tools/eval/synth/sentences.tsv`, 300 sentences of 4–12 words):
+  - 200 from the app's own passages, spread over levels 1–6, with the bundle's own
+    phonemes;
+  - 100 VCTK sentence texts, with Britfone phonemes.
+- **Who reads what**: held-out voices read all 300 sentences. Because of CPU limits
+  (Kokoro runs at about real time per core on this machine), each tuning voice reads a
+  rotating third, so every sentence gets one female and one male tuning read.
+- **Set size**: 3,600 clips (3.6 h of audio), half clean and half with errors.
+  - 30,228 labelled words, 3,818 of them wrong.
+  - 12.6% of all words are wrong, and 25.3% of words in error reads.
+- **Errors** (`inject.py`), chosen uniformly by type, then by word:
+  - substitutions: θ→t/f/s, ð→d/z/v, v→w, w→v, ʃ→s, z→s, ɪ→iː, iː→ɪ, æ→ɛ/ʌ, ʌ→ɒ/æ,
+    ɑː→æ (BATH words only), ɒ→ɑː/ɔː, ɜː→ɛ/ɑː, ʊ→uː;
+  - an added post-vocalic r (never where a linking r would be correct);
+  - a dropped final consonant (only before a vowel or a pause, so it can't pass as
+    elision);
+  - h-dropping and an added h, on content words only;
+  - primary stress moved to another vowel.
+- **Augmentation** (seeded, per clip):
+  - speed 0.9–1.1 inside the engine, plus 80–300 ms of lead and tail silence;
+  - noise in 70% of clips, at 10–30 dB SNR (white, pink or brown, generated by numpy, so
+    there is no third-party audio);
+  - synthetic reverb in 30% (RT60 0.2–0.5 s);
+  - a 300–3,400 Hz phone band in 25%;
+  - finally 16 kHz mono.
+- **Scoring**: engine "wrong" means red (`fix` or `missed`); amber counts as right, the
+  same as `agreement.py`. The harness passes no VAD segments, as in the native run.
+
+### Results (current defaults, unchanged)
+
+| Split | Words | Agreement | Kappa | Errors caught (red) | Errors not green | False red on right words |
+| --- | --- | --- | --- | --- | --- | --- |
+| All voices | 30,228 | **87.5%** | 0.25 | 22.4% | 32.8% | 3.1% |
+| Tuning voices | 10,076 | 87.8% | 0.24 | 19.8% | 29.2% | 2.4% |
+| **Held-out voices** | 20,152 | **87.4%** | **0.26** | **23.7%** | 34.6% | 3.4% |
+| All, amber counted as wrong | 30,228 | 85.8% | 0.29 | 32.8% | | 6.5% |
+| *Engine that marks every word right* | 30,228 | *87.4%* | *0* | *0%* | | *0%* |
+
+- **Clean reads: 3.1% of words are red** (2.6% tuning, 3.3% held out). That is in line
+  with native VCTK (3.6%).
+- **Native VCTK, re-run on this branch**: 3.6% false red (held-out speakers 3.7%). This
+  matches the spike exactly, because the config did not change.
+- **Per voice**:
+  - agreement is 86.2–88.6% for every voice, and kappa is 0.16–0.30;
+  - recall is lowest on `bm_daniel` (12%) and `bf_lily` (14%), both grade-D voices;
+  - cori has the highest false red on right words (4.4% high, 4.9% medium);
+  - by augmentation, the phone band costs about 2 points of agreement (85.8% vs 88.1%).
+    Noise and reverb cost under 1 point.
+
+Detection per error type (share of injected words that come out red; n in brackets):
+
+| Range | Error types |
+| --- | --- |
+| **≥ 50%** | ʃ→s 82% (49), w→v 72% (179), θ→t 59% (49), ɜː→ɛ 56% (52), ɑː→æ 51% (41) |
+| **25–49%** | θ→s 37%, ʌ→æ 36%, v→w 33%, ʊ→uː 33%, θ→f 32%, ð→v 31%, ð→z 30%, iː→ɪ 27%, ð→d 26% |
+| **10–24%** | dropped final consonant 19%, ɒ→ɔː 19%, æ→ɛ 15%, ɪ→iː 15%, æ→ʌ 14%, h-dropping 11% |
+| **< 10%** | moved stress 9%, ʌ→ɒ 7%, z→s 6%, added r 6%, ɜː→ɑː 6%, added h 5%, ɒ→ɑː 1% |
+
+Consonant substitutions overall: 35% red (43% not green). Vowel substitutions: 20% red
+(35% not green).
+
+### Weak spots and why
+
+- **Deliberate blind spots from the spike calibration**:
+  - LOT as ɑː (1%), an added r (6%) and NURSE as ɑː (6%) are accepted on purpose.
+    `extraAccepted` maps ɒ→ɑː, and r-coloured vowels and the intrusive-r cap are
+    lenient, because the en-us-trained model hears native British speech that way.
+  - A teacher would mark all three wrong. This model can't tell them apart from native
+    speech, so fixing them needs the light model trained on RP labels.
+- **Not judged at all**:
+  - stress (9%): the scorer weights stressed vowels but does not compare stress;
+  - an added h (5%): extra sounds between words are not scored as a word error;
+  - ʌ→ɒ (7%): STRUT/LOT is merged in the model's labels for these voices.
+- **Voicing and length** (z→s 6%, ɪ→iː 15%, iː→ɪ 27%): the same weak classes as the
+  spike's probes.
+- **Is the error in the audio at all?** For substitutions, the harness's `heard` column
+  shows the injected sound as the model's best competitor in only 38% of cases. When it
+  does, the word is red 55% of the time.
+  - So roughly half the misses are the TTS or the model "hearing through" the error
+    toward the expected word.
+  - The other half are calibration leniency: a GOP margin too small to make the word red.
+  - I couldn't separate TTS realisation from model bias without a listener or an
+    independent recogniser. That is the main reason this proxy is uncertain.
+
+### Calibration: no change
+
+`python -m tools.eval.synth.calibrate` grid-searched the same 1,296 word-score configs as
+the spike on the **tuning voices only**, with native VCTK false red on the tuning
+speakers capped at 3.5%:
+
+- **Maximising raw agreement** picks a *more lenient* config: 87.9% agreement on
+  held-out voices, but recall falls from 23% to 16% and kappa from 0.26 to 0.21.
+  - With 87% of words right, agreement rewards marking fewer words red.
+  - That would make the app worse at its job, so I rejected it.
+- **Maximising kappa** under the same cap returns the **current defaults**, with only
+  `intrusiveRScore` 80→65 and no measurable effect (held-out kappa 0.259 vs 0.261).
+- More recall needs a stricter curve, and that breaks the native < 5% target. The native
+  cap is the binding constraint, not the calibration.
+
+So `lib/engine/scoring/config/` is **unchanged**. The VCTK false red stays at 3.6% (3.7%
+held out), and held-out-voice numbers are as above.
+
+### Interim verdict under this proxy
+
+- **The ≥ 80% word-agreement gate passes** (87.4% on held-out voices), and
+  `run_harness.sh` / `eval.yml` report GO.
+- **I don't think that result should count as passing.** The gate was written assuming
+  a balanced, teacher-labelled set.
+  - Here, an engine that marks every word right also scores 87.4%.
+  - Kappa is 0.26 ("fair").
+  - The engine flags fewer than 1 in 4 clean, deliberate errors.
+  - On this evidence, the engine is good at leaving correct speech alone (about 3% false
+    red) but weak at catching errors.
+- **My interim verdict is NO-GO for release on accuracy.** It is not a blocker for
+  continued development. Before release:
+  1. add a second gate on chance-corrected agreement (`synth.report --min-kappa`, e.g.
+     0.4) or on recall of injected errors, alongside the 80%;
+  2. train the light model on RP labels (A4) and re-run this set, so that the deliberate
+     blind spots (LOT, r, NURSE) can be closed;
+  3. if at all possible, still get a few teacher-labelled learner recordings to check
+     how far this proxy is from real learners (the teacher path is kept, optional).
+
+Reproduce: `tools/eval/LABELLING.md` ("Default: synthetic labels"). Rendering took about
+3 h on 4 contended CPU cores and the harness 100 min. Outputs are git-ignored.
+
+## Method (engine spike)
 
 ### Harness
 
@@ -89,7 +248,7 @@ substitutions. **This is not teacher agreement.**
 4. The chosen config was then run for real on all 5 speakers. The held-out numbers below
    come from that real run, and they match the built-in defaults byte for byte.
 
-## Results
+## Results (engine spike)
 
 ### Native speakers (false red = `fix` + `missed`)
 

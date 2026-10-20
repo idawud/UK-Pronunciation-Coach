@@ -64,13 +64,17 @@ exists.
 
 ## 4. W0 (`docs/licences.md`): dev-side rows for the eval set
 
-Please add two dev-side rows (nothing is shipped):
+Please add these dev-side rows (nothing is shipped):
 
 - **CSTR VCTK Corpus 0.92**, CC-BY-4.0: also used by `tools/eval/` as the native eval set
   (250 clips, 5 speakers, never shipped).
 - **Britfone 3.0.1**, MIT: used dev-side by `tools/eval/lexicon.py` (pinned commit
   `1062be1`, downloaded, not committed). The existing "Britfone (planned)" row is C1's
   shipped copy.
+- **Kokoro-82M v1.0** (hexgrad, ONNX export by onnx-community), Apache-2.0: 8 British
+  voices used by `tools/eval/synth/` to read the synthetic eval set. Never shipped.
+- **Piper en_GB-cori-medium / -high**, MIT, public-domain LibriVox data: same use.
+  Details, pinned revisions and SHA-256 are in `tools/eval/SOURCES.md`.
 
 The eSpeak NG row already covers `tools/` use. `tools/eval` uses it only as a flagged
 fallback, and the current eval set needs none.
