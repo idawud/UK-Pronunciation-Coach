@@ -149,6 +149,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # With every Wave 1 plug-in in the app, the debug APK build runs out of disk on the
+      # stock runner ("No space left on device"). Remove large preinstalled toolchains this
+      # job never uses. The Android SDK and NDK are kept.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/share/swift \
+            /usr/local/julia* /usr/local/share/boost /usr/local/share/powershell \
+            /usr/local/share/chromium /opt/hostedtoolcache/CodeQL /opt/microsoft
+          sudo docker image prune --all --force > /dev/null
+          df -h /
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
         with:
