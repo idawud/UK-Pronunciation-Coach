@@ -105,6 +105,15 @@ const List<LicenceEntry> shippedLicences = [
     source: 'Microsoft',
   ),
   LicenceEntry(
+    kind: LicenceKind.engine,
+    name: 'Java core library backports (Android)',
+    licence: 'GPL-2.0 with the Classpath Exception',
+    source: 'Google desugar_jdk_libs (from OpenJDK)',
+    note:
+        'Used by the notifications plug-in for daily reminders. Source: '
+        'github.com/google/desugar_jdk_libs',
+  ),
+  LicenceEntry(
     kind: LicenceKind.font,
     name: 'Material Icons',
     licence: 'Apache-2.0',

@@ -66,10 +66,17 @@ Future<FakeProgressRepository> seededRepository() async {
 
 /// Records calls instead of scheduling notifications.
 class RecordingReminderScheduler implements ReminderScheduler {
-  RecordingReminderScheduler({this.supported = true, this.allow = true});
+  RecordingReminderScheduler({
+    this.supported = true,
+    this.allow = true,
+    this.fail = false,
+  });
 
   final bool supported;
   bool allow;
+
+  /// When true, every call throws (e.g. the plug-in failed).
+  bool fail;
   final List<int> scheduled = [];
   int cancelCount = 0;
 
@@ -77,14 +84,22 @@ class RecordingReminderScheduler implements ReminderScheduler {
   bool get isSupported => supported;
 
   @override
-  Future<bool> requestPermission() async => allow;
+  Future<bool> requestPermission() async {
+    if (fail) throw Exception('plug-in failed');
+    return allow;
+  }
 
   @override
-  Future<void> scheduleDaily(int minutesAfterMidnight) async =>
-      scheduled.add(minutesAfterMidnight);
+  Future<void> scheduleDaily(int minutesAfterMidnight) async {
+    if (fail) throw Exception('plug-in failed');
+    scheduled.add(minutesAfterMidnight);
+  }
 
   @override
-  Future<void> cancel() async => cancelCount++;
+  Future<void> cancel() async {
+    cancelCount++;
+    if (fail) throw Exception('plug-in failed');
+  }
 }
 
 /// In-memory backup files: [saved] holds what was saved; [toPick] is returned by pick.

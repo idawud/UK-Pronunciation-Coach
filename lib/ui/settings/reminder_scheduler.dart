@@ -1,4 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/providers.dart';
+import 'local_notifications_reminder_scheduler.dart';
 
 /// Thin adapter over local notifications for the daily practice reminder. Everything is
 /// scheduled on the device; nothing goes to a server.
@@ -17,9 +21,8 @@ abstract interface class ReminderScheduler {
   Future<void> cancel();
 }
 
-/// Used until the notification plug-in is approved (see
-/// docs/contract-requests/U4-progress.md): the reminder time is still saved in the
-/// profile, but no notification is shown.
+/// For platforms without local notifications (desktop, `flutter test` hosts): the
+/// reminder time is still saved in the profile, but no notification is shown.
 class UnavailableReminderScheduler implements ReminderScheduler {
   /// Creates the scheduler.
   const UnavailableReminderScheduler();
@@ -37,7 +40,23 @@ class UnavailableReminderScheduler implements ReminderScheduler {
   Future<void> cancel() async {}
 }
 
-/// The reminder scheduler. Override in tests; I1 binds the real one.
+/// The reminder scheduler: local notifications on Android and iOS, else
+/// [UnavailableReminderScheduler]. Override in tests.
 final reminderSchedulerProvider = Provider<ReminderScheduler>(
-  (ref) => const UnavailableReminderScheduler(),
+  (ref) => platformReminderScheduler(),
 );
+
+/// Re-schedules the saved daily reminder once at start-up, so it survives an OS
+/// restore, an app update or a time-zone change. Never asks for permission and never
+/// throws: a failure only means no reminder until the user changes the setting.
+final reminderRestoreProvider = FutureProvider<void>((ref) async {
+  final scheduler = ref.read(reminderSchedulerProvider);
+  if (!scheduler.isSupported) return;
+  try {
+    final minutes =
+        (await ref.read(progressRepositoryProvider).profile()).reminderMinutes;
+    if (minutes != null) await scheduler.scheduleDaily(minutes);
+  } on Object catch (e) {
+    debugPrint('Reminder: could not restore the daily reminder ($e).');
+  }
+});

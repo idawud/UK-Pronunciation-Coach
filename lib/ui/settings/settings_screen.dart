@@ -116,23 +116,34 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
     return ok ?? false;
   }
 
+  static const _reminderFailed =
+      "The reminder couldn't be set. Please try again.";
+
   Future<void> _setReminder(bool on) async {
     final scheduler = ref.read(reminderSchedulerProvider);
     if (!on) {
-      await scheduler.cancel();
+      try {
+        await scheduler.cancel();
+      } on Exception {
+        // Nothing to cancel on this device; still switch the setting off.
+      }
       await _update((p) => p.copyWith(reminderMinutes: null));
       return;
     }
-    if (!await scheduler.requestPermission()) {
-      _say(
-        'Notifications are off for this app. Turn them on in your phone '
-        'settings to get reminders.',
-      );
-      return;
+    try {
+      if (!await scheduler.requestPermission()) {
+        _say(
+          'Notifications are off for this app. Turn them on in your phone '
+          'settings to get reminders.',
+        );
+        return;
+      }
+      final minutes = profile.reminderMinutes ?? defaultReminderMinutes;
+      await scheduler.scheduleDaily(minutes);
+      await _update((p) => p.copyWith(reminderMinutes: minutes));
+    } on Exception {
+      _say(_reminderFailed);
     }
-    final minutes = profile.reminderMinutes ?? defaultReminderMinutes;
-    await scheduler.scheduleDaily(minutes);
-    await _update((p) => p.copyWith(reminderMinutes: minutes));
   }
 
   Future<void> _pickReminderTime() async {
@@ -144,7 +155,12 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
     );
     if (picked == null) return;
     final minutes = picked.hour * 60 + picked.minute;
-    await ref.read(reminderSchedulerProvider).scheduleDaily(minutes);
+    try {
+      await ref.read(reminderSchedulerProvider).scheduleDaily(minutes);
+    } on Exception {
+      _say(_reminderFailed);
+      return;
+    }
     await _update((p) => p.copyWith(reminderMinutes: minutes));
   }
 
@@ -211,7 +227,11 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
     );
     if (!ok) return;
     await _run(() async {
-      await ref.read(reminderSchedulerProvider).cancel();
+      try {
+        await ref.read(reminderSchedulerProvider).cancel();
+      } on Exception {
+        // Deleting the data matters more than a stale reminder.
+      }
       await ref.read(progressRepositoryProvider).deleteAll();
       _say('All your data was deleted.');
     });
@@ -269,7 +289,7 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
               subtitle: Text(
                 scheduler.isSupported
                     ? 'A local notification. Nothing is sent anywhere.'
-                    : 'Reminders are not available in this version yet.',
+                    : 'Reminders are available on Android and iOS.',
               ),
               value: reminderOn,
               onChanged: scheduler.isSupported || reminderOn
