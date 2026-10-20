@@ -49,27 +49,27 @@ class _Device implements DeviceInfoSource {
   Future<DeviceSnapshot> read() => PluginDeviceInfoSource().read();
 }
 
-void main() {
+// Async so the files exist before the contract group is declared: the shared
+// suite takes the clip as a value at declaration time.
+Future<void> main() async {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  late Directory dir;
-  late ModelFiles tiny;
-  late AudioClip clip;
+  final base = await getTemporaryDirectory();
+  final dir = await Directory('${base.path}/a2_device_test')
+      .create(recursive: true);
+  final tiny = ModelFiles(
+    '${dir.path}/tiny.onnx',
+    '${dir.path}/tiny_vocab.json',
+  );
+  File(tiny.modelPath).writeAsBytesSync(base64Decode(tinyModelBase64));
+  File(tiny.vocabPath).writeAsStringSync(tinyVocabJson);
+  final samples = Float32List.fromList([
+    for (var i = 0; i < 3 * modelSampleRate; i++) 0.3 * math.sin(i * 0.07),
+  ]);
+  final wav = File('${dir.path}/clip.wav')
+    ..writeAsBytesSync(encodePcm16Wav(samples));
+  final clip = AudioClip(path: wav.path, duration: const Duration(seconds: 3));
 
-  setUpAll(() async {
-    final base = await getTemporaryDirectory();
-    dir = await Directory('${base.path}/a2_device_test')
-        .create(recursive: true);
-    tiny = ModelFiles('${dir.path}/tiny.onnx', '${dir.path}/tiny_vocab.json');
-    File(tiny.modelPath).writeAsBytesSync(base64Decode(tinyModelBase64));
-    File(tiny.vocabPath).writeAsStringSync(tinyVocabJson);
-    final samples = Float32List.fromList([
-      for (var i = 0; i < 3 * modelSampleRate; i++) 0.3 * math.sin(i * 0.07),
-    ]);
-    final wav = File('${dir.path}/clip.wav')
-      ..writeAsBytesSync(encodePcm16Wav(samples));
-    clip = AudioClip(path: wav.path, duration: const Duration(seconds: 3));
-  });
   tearDownAll(() => dir.delete(recursive: true));
 
   var n = 0;
