@@ -1,4 +1,8 @@
+import 'dart:async';
 import 'dart:io';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/services.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uk_pronunciation_coach/engine/runtime/network.dart';
@@ -172,6 +176,122 @@ void main() {
       expect(await failing.isUnmetered(), isFalse);
     });
   });
+
+  group('ConnectivityNetworkMonitor', () {
+    const wifi = ConnectivityResult.wifi,
+        eth = ConnectivityResult.ethernet,
+        mobile = ConnectivityResult.mobile,
+        vpn = ConnectivityResult.vpn,
+        other = ConnectivityResult.other,
+        none = ConnectivityResult.none;
+
+    test('classify', () {
+      bool? c(List<ConnectivityResult> r) =>
+          ConnectivityNetworkMonitor.classify(r);
+      expect(c([wifi]), isTrue);
+      expect(c([eth]), isTrue);
+      expect(c([wifi, vpn]), isTrue);
+      expect(c([mobile]), isFalse);
+      expect(c([vpn, mobile]), isFalse);
+      expect(c([wifi, mobile]), isFalse); // be safe: data may be charged
+      expect(c([mobile, ConnectivityResult.satellite]), isFalse);
+      expect(c([none]), isFalse);
+      expect(c([]), isFalse);
+      expect(c([vpn]), isNull);
+      expect(c([other]), isNull);
+      expect(c([ConnectivityResult.bluetooth]), isNull);
+    });
+
+    test('answers from the plug-in, else from the fallback', () async {
+      final conn = _FakeConnectivity([wifi]);
+      final fallback = _FixedNetwork(false);
+      final m = ConnectivityNetworkMonitor(
+        connectivity: conn,
+        fallback: fallback,
+      );
+      expect(await m.isUnmetered(), isTrue);
+      conn.now = [mobile];
+      expect(await m.isUnmetered(), isFalse);
+      conn.now = [vpn];
+      expect(await m.isUnmetered(), isFalse); // fallback
+      fallback.value = true;
+      expect(await m.isUnmetered(), isTrue);
+    });
+
+    test('plug-in errors use the fallback', () async {
+      for (final error in [
+        PlatformException(code: 'x'),
+        MissingPluginException(),
+      ]) {
+        final m = ConnectivityNetworkMonitor(
+          connectivity: _FakeConnectivity([wifi], error: error),
+          fallback: _FixedNetwork(true, changes: [true, false]),
+        );
+        expect(await m.isUnmetered(), isTrue);
+        expect(await m.unmeteredChanges.toList(), [true, false]);
+      }
+    });
+
+    test('changes are mapped and de-duplicated', () async {
+      final conn = _FakeConnectivity([none]);
+      final m = ConnectivityNetworkMonitor(
+        connectivity: conn,
+        fallback: _FixedNetwork(true),
+      );
+      final got = m.unmeteredChanges.toList();
+      conn.changes
+        ..add([mobile])
+        ..add([mobile, vpn])
+        ..add([wifi])
+        ..add([other]) // fallback says true: no change
+        ..add([none]);
+      await conn.changes.close();
+      expect(await got, [false, true, false]);
+    });
+
+    test('platformNetworkMonitor', () {
+      expect(
+        platformNetworkMonitor(mobile: true),
+        isA<ConnectivityNetworkMonitor>(),
+      );
+      expect(
+        platformNetworkMonitor(mobile: false),
+        isA<InterfaceNetworkMonitor>(),
+      );
+      expect(platformNetworkMonitor(), isA<InterfaceNetworkMonitor>());
+    });
+  });
+}
+
+class _FakeConnectivity implements Connectivity {
+  _FakeConnectivity(this.now, {this.error});
+
+  List<ConnectivityResult> now;
+  final Object? error;
+  final changes = StreamController<List<ConnectivityResult>>();
+
+  @override
+  Future<List<ConnectivityResult>> checkConnectivity() async {
+    if (error != null) throw error!;
+    return now;
+  }
+
+  @override
+  Stream<List<ConnectivityResult>> get onConnectivityChanged =>
+      error != null ? Stream.error(error!) : changes.stream;
+}
+
+class _FixedNetwork implements NetworkMonitor {
+  _FixedNetwork(this.value, {this.changes = const []});
+
+  bool value;
+  final List<bool> changes;
+
+  @override
+  Future<bool> isUnmetered() async => value;
+
+  @override
+  Stream<bool> get unmeteredChanges => Stream.fromIterable(changes);
 }
 
 class _Nic implements NetworkInterface {

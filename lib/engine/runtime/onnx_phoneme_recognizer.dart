@@ -77,7 +77,7 @@ class OnnxPhonemeRecognizer implements PhonemeRecognizer {
         dir: Directory('${root.path}/light'),
       ),
       transport: HttpModelTransport(),
-      network: InterfaceNetworkMonitor(),
+      network: platformNetworkMonitor(),
       deviceInfo: PluginDeviceInfoSource(),
     );
   }
