@@ -37,7 +37,7 @@ final speech = await recorder.speechSegments(clip);
 | Package | Version | Licence | Why |
 | --- | --- | --- | --- |
 | `record` (+ `record_android/ios/linux/macos/web/windows/platform_interface`) | 7.1.2 | BSD-3-Clause | Raw PCM16 stream (`startStream`) at 16 kHz mono; auto-gain, echo cancel and noise suppression are off; Android source is `voiceRecognition` |
-| `permission_handler` (+ `_android/_apple/_html/_platform_interface/_windows`) | 12.0.3 (`_android` 13.0.1) | MIT | Microphone status, request and app settings. Pinned to `^12.0.3`: 13.x pulls `permission_handler_android` 14.x, which needs compileSdk 37, and the pinned Flutter's `flutter.compileSdkVersion` is 36. 13.0.1 compiles against 35, minSdk 19. Move to 13.x once the app compiles against SDK 37 |
+| `permission_handler` (+ `_android/_apple/_html/_platform_interface/_windows`) | 13.0.2 (`_android` 14.x) | MIT | Microphone status, request and app settings. 13.x needs compileSdk 37, so `android/app/build.gradle.kts` sets `compileSdk = 37` (Flutter's default is 36; targetSdk unchanged). Was pinned to 12.0.3 until #22 |
 | Silero VAD v6.2 (`silero_vad.onnx`, 2,327,524 B, sha256 `1a153a22…88e3`) | v6.2 tag | MIT | Run on the ONNX Runtime that **`onnxruntime_v2`** (A2's dependency, MIT) already ships |
 
 **No `sherpa_onnx`.** It bundles its own ONNX Runtime, and two copies in one app risk
