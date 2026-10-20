@@ -13,7 +13,7 @@ HALF_TAPS = 32  # windowed-sinc half width (input samples at the lower rate)
 CHUNK = 1 << 15
 
 
-def resample(audio: np.ndarray, sr_in: int, sr_out: int) -> np.ndarray:
+def resample(audio: np.ndarray, sr_in: int, sr_out: int, fast: bool = True) -> np.ndarray:
     """Band-limited resampling with a Kaiser-windowed sinc (numpy only; scipy's wheel
     metadata trips the licence check). Cut-off is 0.95 x the lower Nyquist frequency."""
     if sr_in == sr_out:
@@ -25,6 +25,13 @@ def resample(audio: np.ndarray, sr_in: int, sr_out: int) -> np.ndarray:
     offsets = np.arange(-half + 1, half + 1)
     padded = np.concatenate([np.zeros(half), audio, np.zeros(half + 1)])
     window = np.kaiser(2 * half + 1, 8.6)
+    if fast and sr_in % sr_out == 0:
+        # integer decimation (48 kHz -> 16 kHz): output samples sit on input samples, so the
+        # same kernel is a fixed FIR; correlate once and keep every factor-th sample
+        dist = -offsets
+        taps = cutoff * np.sinc(cutoff * dist) * window[dist + half]
+        full = np.correlate(padded[1:], taps, mode="valid")
+        return full[:: sr_in // sr_out][:n_out].astype(np.float32)
     out = np.empty(n_out, dtype=np.float64)
     for start in range(0, n_out, CHUNK):
         t = np.arange(start, min(start + CHUNK, n_out)) / ratio  # input-sample positions

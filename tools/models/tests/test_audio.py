@@ -37,3 +37,13 @@ def test_resample_keeps_tones_and_removes_aliases():
     assert np.abs(audio.resample(above_nyquist, 48000, 16000))[200:-200].max() < 0.01
     same = np.ones(5)
     assert audio.resample(same, 16000, 16000).dtype == np.float32
+
+
+def test_integer_decimation_fast_path_matches_general_resampler():
+    rng = np.random.default_rng(0)
+    for n in (48000, 48001, 48002, 100):
+        x = rng.standard_normal(n)
+        fast = audio.resample(x, 48000, 16000)
+        slow = audio.resample(x, 48000, 16000, fast=False)
+        assert fast.shape == slow.shape
+        assert np.abs(fast - slow).max() < 1e-5
