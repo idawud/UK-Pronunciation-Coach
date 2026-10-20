@@ -3,7 +3,12 @@
 No change to `lib/core/contracts/` or `lib/core/models/` is needed: `OnnxPhonemeRecognizer`
 passes `runPhonemeRecognizerContract` unchanged. The items below need someone else's files.
 
-## 1. Licence allowlist decision: `connectivity_plus` (W0 / human)
+## 1. Licence allowlist decision: `connectivity_plus` (W0 / human): DONE
+
+**Done 2026-10-20**: owner approved `nm` and `dbus`; `ConnectivityNetworkMonitor` is
+restored with `InterfaceNetworkMonitor` as fallback. Note: `connectivity_plus` 7.x does
+**not** read Android's metered flag (transport only); it fixes the hotspot and
+Wi-Fi-without-internet cases. See docs/handoff/A2-runtime.md.
 
 - **What:** either approve `nm` and `dbus` (MPL-2.0) in `tools/ci/licence_allowlist.txt`,
   or confirm the current workaround.

@@ -48,7 +48,8 @@ checks the main components named in docs/licences.md appear on the page.
 **Adapters** (fakeable, overridable providers):
 
 - `ReminderScheduler` / `reminderSchedulerProvider` (`reminder_scheduler.dart`).
-  Default `UnavailableReminderScheduler`: see "Known gaps".
+  Default `LocalNotificationsReminderScheduler` on Android / iOS (see "Update
+  2026-10-20"), `UnavailableReminderScheduler` elsewhere.
 - `BackupFiles` / `backupFilesProvider` (`backup_files.dart`), implemented by
   `PlatformBackupFiles` on file_picker's platform interface.
 
@@ -86,16 +87,10 @@ type. Practise and onboarding checks are unchanged.
 
 ## Known gaps
 
-- **Reminders do not fire yet.** Waiting for the `dbus` allowlist decision
-  (docs/contract-requests/U4-progress.md, request 1). Until then the reminder switch is
-  disabled with an explanation. The drop-in implementation and native steps
-  (desugaring, boot receiver, iOS delegate; inexact alarms, no exact-alarm permission)
-  are in the request.
-- **File dialogs not verified on a device** (no emulator here): using
-  `android_file_picker` / `file_picker_darwin` without the `file_picker` app package
-  relies on their `dartPluginClass` registration (request 3).
-- Reminders are only scheduled when the setting changes or a backup is imported; I1
-  should reschedule on start-up (request 4).
+- **Reminders need an on-device check** (see "Update 2026-10-20"): that one fires at
+  the chosen time, survives a reboot, and shows while the app is open on iOS.
+- **File dialogs not verified on a device**: the save / open round trip still needs
+  a phone. Registration itself is confirmed (see the update).
 - Text size is stored here; U2 / U3 must apply `textScale` to passage text.
 - Licences page data is hand-kept: update `licence_data.dart` when docs/licences.md
   rows land (Silero VAD, Britfone file names, any Piper voice, any bundled IPA font
@@ -104,3 +99,74 @@ type. Practise and onboarding checks are unchanged.
   (`SoundAccuracyList(limit:)` exists).
 - Strings are English only (no l10n setup in the app yet); dates use a small built-in
   British formatter.
+
+## Update 2026-10-20: reminders on (feat/reminders-mpl)
+
+The owner approved `dbus` and `nm` (MPL-2.0, Linux-desktop-only) in
+`tools/ci/licence_allowlist.txt`; requests 1, 2 and 4 are done.
+
+**Packages** (licences read from the pub cache): `flutter_local_notifications`
+22.3.2 and its platform packages (BSD-3-Clause), `timezone` 0.11.2 (BSD-2-Clause),
+`flutter_timezone` 5.1.1 (Apache-2.0); transitive `http` (BSD-3), `dbus` (MPL-2.0,
+allowlisted, Linux only). Android also compiles in **`desugar_jdk_libs` 2.1.4
+(GPL-2.0 with the Classpath Exception)**, which the plug-in requires: listed in
+docs/licences.md and on the Licences page, flagged there for owner sign-off.
+
+**Scheduler** (`lib/ui/settings/local_notifications_reminder_scheduler.dart`):
+
+- `LocalNotificationsReminderScheduler` over a small `ReminderNotifications` seam
+  (`PluginReminderNotifications` wraps the plug-in and `flutter_timezone`).
+- Lazy set-up on first use: plug-in `initialize` (iOS asks for nothing at start-up),
+  tz database (`timezone/data/latest.dart`), device zone from `flutter_timezone`
+  (unknown zone -> fixed current offset). A failed set-up is retried next call.
+- `requestPermission`: Android 13+ `POST_NOTIFICATIONS` prompt (older Android:
+  whether notifications are on); iOS alert + sound.
+- `scheduleDaily(m)`: notification id 1, "Time to practise" / "A few minutes of
+  reading keeps your streak going.", first at the next local m (built from calendar
+  fields so it stays at the same wall-clock time across BST / GMT), repeating daily
+  (`DateTimeComponents.time`), `AndroidScheduleMode.inexactAllowWhileIdle`, channel
+  `daily_reminder`. Replaces any earlier reminder. `cancel()` cancels id 1.
+- `platformReminderScheduler()` picks it on Android / iOS (by `dart:io` `Platform`,
+  so `flutter test` hosts get `UnavailableReminderScheduler`).
+- Start-up: `reminderRestoreProvider` re-schedules the saved reminder once (never
+  prompts, never throws); `CoachApp` listens to it (`lib/app.dart`, W0 file, one
+  line). This picks up time-zone changes, OS restores and app updates.
+
+**Settings:** the reminder switch is enabled on phones. Permission denied: "Notifications
+are off for this app. Turn them on in your phone settings to get reminders." A plug-in
+failure: "The reminder couldn't be set. Please try again." (setting unchanged).
+Switching off and "Delete all data" still complete if cancelling fails. Other
+platforms: switch disabled, "Reminders are available on Android and iOS."
+
+**Native (outside U4's folders, owner-directed):** `android/app/build.gradle.kts`
+(core library desugaring + `desugar_jdk_libs:2.1.4`),
+`android/app/src/main/AndroidManifest.xml` (`RECEIVE_BOOT_COMPLETED`,
+`ScheduledNotificationReceiver`, `ScheduledNotificationBootReceiver`; no exact-alarm
+permission), `ios/Runner/AppDelegate.swift` (`UNUserNotificationCenter` delegate).
+The plug-in's `setPluginRegistrantCallback` is not needed (no notification actions).
+
+**file_picker: not switched.** `file_picker` 13.1.0 is a static facade over the same
+`FilePickerPlatform.instance` calls `PlatformBackupFiles` already makes, so it would
+not simplify anything and would add `file_picker_linux`, `windows_file_picker` and
+`file_picker_web`. The open question in request 3 is answered: the generated
+`.dart_tool/flutter_build/dart_plugin_registrant.dart` registers
+`FilePickerAndroid.registerWith()` and `FilePickerDarwin.registerWith()` with only the
+implementation packages as dependencies.
+
+**Tests:** `test/ui/settings/local_notifications_reminder_scheduler_test.dart` (fake
+adapter: next time across BST end / start, skipped hour, month and year roll-over,
+time zones, fallback zone, lazy set-up and retry, cancel, permission denied; the plug-in
+adapter over mocked method channels checks `initialize`, permission, `zonedSchedule`
+arguments (zone, time, daily match, inexact mode) and `cancel`; provider choice;
+start-up restore). `settings_screen_test.dart`: failure messages and fail-safe
+off / delete. Goldens unchanged (the harness scheduler was already "supported").
+On-device: `integration_test/U4-progress/reminder_device_test.dart` schedules,
+reschedules and cancels through the real plug-in and checks the pending list (no
+permission prompt; Android allows scheduling without it). Skipped on iOS, which
+refuses to schedule before the user allows notifications.
+
+**Needs a phone:** the notification actually appears at the time (Doze can delay an
+inexact alarm by some minutes); it survives a reboot; the iOS foreground banner; the
+Android small icon (uses `@mipmap/ic_launcher`, a monochrome icon would look better);
+the Android 12L+ desugaring crash the plug-in README mentions (fix: add
+`androidx.window` dependencies) has not been seen here.
