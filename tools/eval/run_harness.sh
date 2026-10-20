@@ -13,6 +13,7 @@
 #    (EVAL_SYNTH_BUILD=1; hours on CPU, needs the voices from
 #    `python -m tools.eval.synth.build fetch`), harness, then agreement per split.
 #    Fails when agreement on EVAL_SYNTH_GATE voices (default heldout) < 80%.
+#    EVAL_SYNTH_PARTIAL=1 scores the fully rendered sentences of a partial build.
 # 4. Optional learner set (tools/eval/data/learners/<speaker>/<passage>.wav) with
 #    teacher labels (tools/eval/labels/labels.csv). Fails below 80%.
 # Every step whose inputs are missing (model, audio, voices, labels) prints SKIPPED and
@@ -71,11 +72,13 @@ SYN_STATUS=$("$PY" -m tools.eval.synth.build status --out "$SYN")
 echo "$SYN_STATUS"
 if ! have_model; then
   echo "SKIPPED: synthetic harness (no model)"
-elif ! grep -q 'still to render: 0$' <<<"$SYN_STATUS"; then
-  echo "SKIPPED: synthetic audio incomplete (EVAL_SYNTH_BUILD=1, or restore the cache)"
+elif ! grep -q 'still to render: 0$' <<<"$SYN_STATUS" && [[ "${EVAL_SYNTH_PARTIAL:-0}" != "1" ]]; then
+  echo "SKIPPED: synthetic audio incomplete (EVAL_SYNTH_BUILD=1, restore the cache, or"
+  echo "         EVAL_SYNTH_PARTIAL=1 to score only the fully rendered sentences)"
 else
-  run_harness "$SYN/manifest.tsv" "$SYN" "$SYN/passages.json" "$OUT/synth"
-  gate "$PY" -m tools.eval.synth.report --labels "$SYN/labels.csv" \
+  "$PY" -m tools.eval.synth.build subset --out "$SYN"
+  run_harness "$SYN/manifest.complete.tsv" "$SYN" "$SYN/passages.json" "$OUT/synth"
+  gate "$PY" -m tools.eval.synth.report --labels "$SYN/labels.complete.csv" \
     --words "$OUT/synth/words_default.csv" --json "$OUT/synth/summary.json" \
     --gate "$SYNTH_GATE"
 fi

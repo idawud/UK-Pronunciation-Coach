@@ -164,3 +164,22 @@ def test_tuning_voices_share_sentences():
         "s2__bf_emma__clean",
         "s2__bf_emma__error",
     }
+
+
+def test_render_order_groups_sentences_and_subset(tmp_path):
+    two = [PASSAGE, {**PASSAGE, "id": "s2"}]
+    B.write_plan(tmp_path, two, VOICES2, 1)
+    items = B.read_tsv(tmp_path / "items.tsv")
+    order = B.render_order(items)
+    assert sorted(order, key=lambda r: r["item"]) == sorted(items, key=lambda r: r["item"])
+    sents = [r["sentence"] for r in order]
+    assert sents == sorted(sents, key=sents.index)  # each sentence contiguous
+    assert B.complete_sentences(items, tmp_path) == set()
+    for r in items:
+        if r["sentence"] == "s2":
+            B.render_item(r, tmp_path, tmp_path, engine=FakeEngine())
+    assert B.complete_sentences(items, tmp_path) == {"s2"}
+    stats = B.write_subset(tmp_path, items)
+    assert stats == {"sentences": 1, "items": 4, "words": 24}
+    labels = ag.read_csv(tmp_path / "labels.complete.csv")
+    assert {r["passage"] for r in labels} == {"s2"}

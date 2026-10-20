@@ -225,10 +225,39 @@ def pending(items: list[dict], out: Path, kinds: tuple[str, ...] = ("wav", "dry"
     ]
 
 
+def render_order(items: list[dict]) -> list[dict]:
+    """Sentences in a seeded shuffled order (all reads of a sentence together), so an
+    interrupted run leaves a representative subset of whole sentences, not a prefix."""
+    return sorted(
+        items, key=lambda r: (inject.stable_rng("order", r["sentence"]).random(), r["item"])
+    )
+
+
+def complete_sentences(items: list[dict], out: Path) -> set[str]:
+    """Sentences whose planned reads all have audio (`wav`)."""
+    missing = {r["sentence"] for r in pending(items, out, ("wav",))}
+    return {r["sentence"] for r in items} - missing
+
+
+def write_subset(out: Path, items: list[dict]) -> dict:
+    """`manifest.complete.tsv` / `labels.complete.csv`: only sentences whose planned
+    reads are all rendered, for scoring a partial build."""
+    keep = complete_sentences(items, out)
+    manifest = [r for r in read_tsv(out / "manifest.tsv") if r["passage"] in keep]
+    write_tsv(out / "manifest.complete.tsv", manifest, MANIFEST_FIELDS)
+    with open(out / "labels.csv", newline="", encoding="utf-8") as f:
+        labels = [r for r in csv.DictReader(f) if r["passage"] in keep]
+    with open(out / "labels.complete.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, LABEL_FIELDS + EXTRA_LABEL_FIELDS, lineterminator="\n")
+        w.writeheader()
+        w.writerows(labels)
+    return {"sentences": len(keep), "items": len(manifest), "words": len(labels)}
+
+
 def synth_all(
     items: list[dict], out: Path, root: Path, workers: int = 4, log=print
 ) -> int:  # pragma: no cover - needs the voices; render_item is tested
-    todo = pending(items, out)
+    todo = render_order(pending(items, out))
     log(f"{len(todo)} of {len(items)} items to render with {workers} worker(s)")
     if not todo:
         return 0
@@ -258,7 +287,7 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - CLI wiring
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument("step", choices=["fetch", "sentences", "plan", "synth", "status"])
+    ap.add_argument("step", choices=["fetch", "sentences", "plan", "synth", "status", "subset"])
     ap.add_argument("--out", type=Path, default=OUT)
     ap.add_argument("--voices-dir", type=Path, default=DEFAULT_DIR)
     ap.add_argument("--voices", default=",".join(VOICES), help="comma-separated voice names")
@@ -289,6 +318,9 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - CLI wiring
         print("voices available:", ", ".join(have) or "none")
         items = read_tsv(args.out / "items.tsv") if (args.out / "items.tsv").exists() else []
         print(f"items: {len(items)}, still to render: {len(pending(items, args.out, ('wav',)))}")
+        return 0
+    if args.step == "subset":
+        print(json.dumps(write_subset(args.out, read_tsv(args.out / "items.tsv"))))
         return 0
     missing = [v.name for v in voices if not available(v, args.voices_dir)]
     if missing:
