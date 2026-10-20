@@ -93,6 +93,10 @@ jobs:
           script: echo "AVD snapshot created"
       - name: Integration tests (all of integration_test/)
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          # Each test file triggers a Gradle build while the emulator runs; on the 2-vCPU
+          # runner that starved the emulator ("hanging thread 'QEMU2 main loop'").
+          GRADLE_OPTS: -Dorg.gradle.workers.max=2
         with:
           api-level: 34
           arch: x86_64
@@ -101,8 +105,9 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           # One file per run so a crash in one file can't hide the rest; fails at the end
-          # if any file failed. Kept on one line: the action runs each line separately.
-          script: rc=0; for f in $(find integration_test -name '*_test.dart' | sort); do echo "=== $f"; flutter test "$f" --reporter expanded || { echo "=== FAILED $f"; rc=1; }; done; exit $rc
+          # if any file failed. `nice` keeps the builds below the emulator's CPU priority.
+          # Kept on one line: the action runs each line separately.
+          script: rc=0; for f in $(find integration_test -name '*_test.dart' | sort); do echo "=== $f"; nice -n 15 flutter test "$f" --reporter expanded || { echo "=== FAILED $f"; rc=1; }; done; exit $rc
 
   ios:
     name: ios-simulator
