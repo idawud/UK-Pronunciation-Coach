@@ -16,6 +16,15 @@ _WordSpec _$WordSpecFromJson(Map<String, dynamic> json) => _WordSpec(
       const <PhonemeSpec>[],
   scorable: json['scorable'] as bool? ?? true,
   offset: (json['offset'] as num?)?.toInt(),
+  alternatives:
+      (json['alternatives'] as List<dynamic>?)
+          ?.map(
+            (e) => (e as List<dynamic>)
+                .map((e) => PhonemeSpec.fromJson(e as Map<String, dynamic>))
+                .toList(),
+          )
+          .toList() ??
+      const <List<PhonemeSpec>>[],
 );
 
 Map<String, dynamic> _$WordSpecToJson(_WordSpec instance) => <String, dynamic>{
@@ -24,4 +33,7 @@ Map<String, dynamic> _$WordSpecToJson(_WordSpec instance) => <String, dynamic>{
   'phonemes': instance.phonemes.map((e) => e.toJson()).toList(),
   'scorable': instance.scorable,
   'offset': instance.offset,
+  'alternatives': instance.alternatives
+      .map((e) => e.map((e) => e.toJson()).toList())
+      .toList(),
 };

@@ -114,23 +114,122 @@ class GopPronunciationScorer implements PronunciationScorer {
 
   @override
   WordResult scoreWord(WordSpec word, PhonemePosteriors posteriors) {
-    final single = Passage(
-      id: 'word',
-      level: 1,
-      title: word.text,
-      text: word.text,
-      words: [word.copyWith(index: 0, offset: null)],
-    );
-    final r = analyse(single, posteriors, const []).words.single;
+    final r = _bestVariant(word, posteriors).result;
     return r.copyWith(index: word.index, text: word.text);
   }
 
   /// Scores [passage] and returns the details behind the result.
+  ///
+  /// Words with [WordSpec.alternatives] are scored against the pronunciation that
+  /// matches the audio best: after a first pass with every word's main
+  /// pronunciation, each such word is scored alone, with each of its
+  /// pronunciations, on the frames between its spoken neighbours; the best one
+  /// (the main pronunciation on a tie) replaces the word's phonemes and the
+  /// passage is scored again. The result's phonemes are then the chosen form's.
   ScoringAnalysis analyse(
     Passage passage,
     PhonemePosteriors posteriors,
     List<Segment> speech,
-  ) => _Analysis(this, passage, posteriors, speech).run();
+  ) {
+    final first = _Analysis(this, passage, posteriors, speech).run();
+    if (!passage.words.any((w) => w.scorable && w.alternatives.isNotEmpty)) {
+      return first;
+    }
+    var changed = false;
+    final words = <WordSpec>[];
+    for (final w in passage.words) {
+      if (!w.scorable || w.alternatives.isEmpty) {
+        words.add(w);
+        continue;
+      }
+      final (start, end) = _window(first.words, w.index, posteriors);
+      if (end - start < 1) {
+        words.add(w);
+        continue;
+      }
+      final window = posteriors.copyWith(
+        frames: posteriors.frames.sublist(start, end),
+      );
+      final best = _bestVariant(w, window).phonemes;
+      if (identical(best, w.phonemes)) {
+        words.add(w);
+      } else {
+        changed = true;
+        words.add(w.copyWith(phonemes: best));
+      }
+    }
+    if (!changed) return first;
+    return _Analysis(
+      this,
+      passage.copyWith(words: words),
+      posteriors,
+      speech,
+    ).run();
+  }
+
+  /// Frames between the spoken words around word [index] in a first-pass result:
+  /// from the end of the previous word heard to the start of the next one.
+  static (int, int) _window(
+    List<WordResult> results,
+    int index,
+    PhonemePosteriors posteriors,
+  ) {
+    final frameMs = posteriors.frameMs;
+    var start = 0;
+    var end = posteriors.frames.length;
+    for (var i = index - 1; i >= 0; i--) {
+      final ph = results[i].phonemes;
+      if (results[i].status != WordStatus.missed && ph.isNotEmpty) {
+        start = ph.last.end.inMilliseconds ~/ frameMs;
+        break;
+      }
+    }
+    for (var i = index + 1; i < results.length; i++) {
+      final ph = results[i].phonemes;
+      if (results[i].status != WordStatus.missed && ph.isNotEmpty) {
+        end = ph.first.start.inMilliseconds ~/ frameMs;
+        break;
+      }
+    }
+    return (
+      start.clamp(0, posteriors.frames.length),
+      end.clamp(start, posteriors.frames.length),
+    );
+  }
+
+  /// Scores [word] alone on [posteriors] with its main pronunciation and each
+  /// alternative; returns the best (the main one on a tie).
+  ({List<PhonemeSpec> phonemes, WordResult result}) _bestVariant(
+    WordSpec word,
+    PhonemePosteriors posteriors,
+  ) {
+    WordResult scoreAs(List<PhonemeSpec> phonemes) {
+      final single = Passage(
+        id: 'word',
+        level: 1,
+        title: word.text,
+        text: word.text,
+        words: [
+          word.copyWith(
+            index: 0,
+            offset: null,
+            phonemes: phonemes,
+            alternatives: const [],
+          ),
+        ],
+      );
+      return _Analysis(this, single, posteriors, const []).run().words.single;
+    }
+
+    var best = (phonemes: word.phonemes, result: scoreAs(word.phonemes));
+    if (!word.scorable) return best;
+    for (final alt in word.alternatives) {
+      if (alt.isEmpty) continue;
+      final r = scoreAs(alt);
+      if (r.score > best.result.score) best = (phonemes: alt, result: r);
+    }
+    return best;
+  }
 }
 
 class _WordPlan {
