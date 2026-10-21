@@ -66,5 +66,10 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- flutter_tts (C4): lets TextToSpeech bind to the installed engine and list
+             its voices under API 30+ package visibility. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
     </queries>
 </manifest>
