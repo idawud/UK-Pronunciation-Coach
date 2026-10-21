@@ -1,5 +1,11 @@
 # Contract and native requests: C4-voice
 
+## Status (I1-integration, 2026-10-21)
+
+1. `<queries>` TTS_SERVICE: **done** (`android/app/src/main/AndroidManifest.xml`).
+2. Binding: **done** (`createVoiceService()` in `lib/core/providers.dart`).
+3. Open-TTS-settings helper: **deferred** (optional, needs a new plug-in; the install guidance and "Check again" work without it).
+
 No change to `lib/core/contracts/` is needed: `SystemVoiceService` passes
 `runVoiceServiceContract` unchanged.
 

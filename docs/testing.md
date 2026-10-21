@@ -14,7 +14,7 @@ run `scripts/check.sh` before you push.
 | Python | Content build, model export, eval harness, CI scripts | pytest, ruff | `tools/*/tests/` | 80% for `tools/` |
 | Content | Bundle schema, 20 passages per level, phonemes for every scorable word | Dart test + `tools/ci/check_content.py` | `test/content/` | must pass |
 | On-device | Native parts: recording from fixture audio, ONNX, SQLite, TTS | integration_test | `integration_test/<agent-id>/` | must pass (emulator) |
-| End-to-end | Full journeys with network off | integration_test | `integration_test/e2e/` | must pass on main |
+| End-to-end | Full journeys with network off | integration_test (+ host mirror in `test/e2e/`) | `integration_test/e2e/` | must pass on main |
 | Accuracy | Word agreement with teacher labels | `tools/eval` | `tools/eval/` | >= 80% |
 
 The coverage gate (`tools/ci/coverage_gate.py`) reads `coverage/lcov.info`, ignores
@@ -28,7 +28,9 @@ A folder with no Dart code yet is skipped.
 scripts/check.sh                       # everything below (goldens on Linux only)
 scripts/check.sh --quick               # skip goldens and Python
 flutter test                           # all Dart tests (unit, widget, contract, golden)
-flutter test --exclude-tags golden     # what the CI "test" job runs
+flutter test --exclude-tags golden,perf   # what the CI "test" job runs
+flutter test --tags perf --concurrency=1  # timing gates, alone (check.sh and CI do this)
+flutter test test/e2e                  # host e2e journey (needs the light model fetched)
 flutter test --tags golden             # what the CI "golden" job runs
 flutter test --update-goldens --tags golden   # regenerate goldens (Linux only)
 flutter test test/engine/scoring       # one folder
@@ -117,6 +119,34 @@ up in `docs/contract-requests/<agent-id>.md`.
 - Fixture audio only: never a real microphone, never the network.
 - Model files come from GitHub Release assets listed in `assets/models/manifest.json`
   (`tools/ci/fetch_models.py`, cached by SHA-256).
+
+## Timing tests and flakiness
+
+Tests that time something are tagged `perf` (`@Tags(['perf'])` at the top of the
+file) and run on their own after the main run: `flutter test --tags perf
+--concurrency=1` (check.sh and CI's `test` job). The main run uses every core and
+other processes may share the machine, which made these fail although nothing was
+slow on an idle machine:
+
+| Test | Gate (unchanged) | Fix |
+| --- | --- | --- |
+| A3 `test/engine/scoring/benchmark_test.dart` | 200 words scored in < 100 ms | `perf` tag; best of 3 medians of 7 runs (a consistently slow scorer still fails); a second case with alternative pronunciations |
+| C2 `test/data/progress/performance_test.dart` | 1,000 attempts load in < 200 ms | `perf` tag; best of 10 loads |
+| U2 `scoring_controller_test.dart` "waveform keeps only the latest values" | 64 values kept | waits until every level value was emitted instead of a fixed 100 ms of real time |
+
+Write new timing tests the same way, and prefer waiting for a condition (or fake
+time) over a fixed real delay. Never add retries.
+
+## End-to-end journey
+
+`integration_test/e2e/journey.dart` holds the journey; `integration_test/e2e/journey_test.dart`
+runs it on a device and `test/e2e/journey_host_test.dart` on the Linux host with the
+real engine (it skips when `assets/models/light-model.onnx` is missing: run
+`python3 tools/ci/fetch_models.py --tier light`). See `integration_test/e2e/README.md`.
+
+Unit and widget tests under `test/` bind every provider to its fake by default
+(`test/flutter_test_config.dart` sets `debugUseFakesOverride`); the app itself uses
+the real implementations. A test that wants a real one overrides the provider.
 
 ## Rules
 

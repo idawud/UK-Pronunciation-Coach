@@ -1,5 +1,12 @@
 # Contract requests: A1-audio
 
+## Status (I1-integration, 2026-10-21)
+
+1. Silero VAD bundled: **done**. `assets/models/silero_vad.onnx` (v6.2, SHA-256 `1a153a22…88e3`) is committed (git-ignore exception, 2.3 MB) instead of a manifest entry: I1 cannot publish release assets. The recorder no longer falls back to the energy VAD.
+2. `docs/licences.md` row: **done**.
+3. iOS `PERMISSION_MICROPHONE=1`: **done** in the new `ios/Podfile` (Flutter's template). Unverified on a device (no Xcode here).
+4. Wiring: **done** (`CoachAudioRecorder.platform()` in `lib/core/providers.dart`).
+
 No change to `lib/core/contracts/` or `lib/core/models/` is needed: `AudioRecorder`,
 `AudioClip` (with `quality`, `peakDbfs`, `snrDb`) and `Segment` cover everything, and
 the shared suite passes unchanged. The requests below are for files A1 does not own.

@@ -1,5 +1,9 @@
 # Contract requests: C2-data
 
+## Status (I1-integration, 2026-10-21)
+
+1. and 2. **Done** as documentation: `ProgressRepository.saveAttempt` and `updateWordResult` doc comments now say both. No code change.
+
 Nothing blocking: `DriftProgressRepository` passes the frozen `ProgressRepository`
 suite unchanged. Two clarifications for the post-Wave-1 review:
 

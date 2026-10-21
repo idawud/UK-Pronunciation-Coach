@@ -1,5 +1,10 @@
 # Contract requests: A3-scoring
 
+## Status (I1-integration, 2026-10-21)
+
+1. `FluencyDetail` on `AttemptResult`: **deferred to v1.1** (touches C2's schema, U3 and the fake; nothing in v1 needs it).
+2. Performance note: no change needed.
+
 No change is required: `GopPronunciationScorer` and `TableTips` pass the shared
 `PronunciationScorer` and `Tips` suites unchanged.
 

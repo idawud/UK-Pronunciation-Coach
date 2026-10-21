@@ -1,5 +1,12 @@
 # Contract requests: A2-runtime
 
+## Status (I1-integration, 2026-10-21)
+
+1. `connectivity_plus`: **done** (earlier).
+2. Model format: **done** by A4.
+3. ONNX Runtime licence row: **done** (`docs/licences.md`; the Licences page already had it).
+4. Native configuration: **nothing to change**; the iOS `-Wl,-u,_OrtGetApiBase` fallback is **deferred** until an iOS build shows the symbol missing (no Xcode here).
+
 No change to `lib/core/contracts/` or `lib/core/models/` is needed: `OnnxPhonemeRecognizer`
 passes `runPhonemeRecognizerContract` unchanged. The items below need someone else's files.
 

@@ -53,7 +53,7 @@ Plug-ins added for reminders and the Wi-Fi check (all permissive):
 | CSTR VCTK Corpus 0.92 | CC-BY-4.0 | `tools/models/`: light-tier distillation audio, held-out PER and logits checks (A4). Data never shipped; only trained weights. |
 | CSTR VCTK Corpus 0.92 (eval) | CC-BY-4.0 | `tools/eval/`: native eval set (250 clips, 5 Southern England speakers), never shipped (I2) |
 | Britfone 3.0.1 (eval copy) | MIT | `tools/eval/lexicon.py`: pinned commit `1062be1`, downloaded, not committed (I2) |
-| Kokoro-82M v1.0 (hexgrad; ONNX export by onnx-community) | Apache-2.0 | `tools/eval/synth/`: 8 British voices read the synthetic eval set; never shipped (I2; pins in `tools/eval/SOURCES.md`) |
+| Kokoro-82M v1.0 (hexgrad; ONNX export by onnx-community) | Apache-2.0 | `tools/eval/synth/`: 8 British voices read the synthetic eval set; three `bm_george` reads are the e2e test clips in `test/e2e/fixtures/` (I1). Never shipped (I2; pins in `tools/eval/SOURCES.md`) |
 | Piper en_GB-cori-medium / -high | MIT; public-domain LibriVox data | `tools/eval/synth/`: same use (I2) |
 | torch, transformers, onnx, onnxruntime, safetensors, huggingface_hub, soundfile, pyarrow | BSD-3-Clause / Apache-2.0 / Apache-2.0 / MIT / Apache-2.0 / Apache-2.0 / BSD-3-Clause / Apache-2.0 | `tools/models/` export, quantisation, training (A4) |
 

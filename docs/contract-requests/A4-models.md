@@ -1,5 +1,9 @@
 # Contract requests: A4-models
 
+## Status (I1-integration, 2026-10-21)
+
+1. Licences page source for the light model: **done** (`licence_data.dart`, its test, and the "GPU route" sentence dropped from `docs/licences.md`).
+
 ## 1. Licences page: the light model is now distilled from the full model (for U4)
 
 1. **Change:** in `lib/ui/settings/licence_data.dart`, update the `Light phoneme model (bundled)` entry's `source`.

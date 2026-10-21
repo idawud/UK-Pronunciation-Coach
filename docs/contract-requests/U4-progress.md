@@ -1,5 +1,11 @@
 # Contract and native requests: U4-progress
 
+## Status (I1-integration, 2026-10-21)
+
+1. and 2. **Done** (earlier, feat/reminders-mpl).
+3. File save / open: registration confirmed; the round trip still needs a device.
+4. Wiring: **done**. The reminder is re-scheduled on start-up (`reminderRestoreProvider`, listened to by `CoachApp` once start-up finishes). After "Delete all data" the router sends the user to onboarding on the next navigation (checked by the e2e journey). Text size is applied by U2 and U3.
+
 No change to `lib/core/contracts/` or `lib/core/models/` is needed. These requests are
 for files U4 does not own (CI allowlist, `android/`, `ios/`, `lib/core/providers.dart`).
 
