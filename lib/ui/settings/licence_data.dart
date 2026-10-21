@@ -63,7 +63,9 @@ const List<LicenceEntry> shippedLicences = [
     kind: LicenceKind.model,
     name: 'Light phoneme model (bundled)',
     licence: 'Apache-2.0',
-    source: 'facebook/wav2vec2-base, fine-tuned for this app',
+    source:
+        'facebook/wav2vec2-lv-60-espeak-cv-ft, reduced to 6 layers and '
+        'distilled for this app',
     note:
         'Trained in part on the CSTR VCTK Corpus (University of Edinburgh), '
         'CC BY 4.0.',
@@ -78,7 +80,8 @@ const List<LicenceEntry> shippedLicences = [
     kind: LicenceKind.model,
     name: 'Silero VAD (speech detection)',
     licence: 'MIT',
-    source: 'snakers4/silero-vad',
+    source: 'snakers4/silero-vad v6.2',
+    note: 'Copyright (c) 2020-present Silero Team.',
   ),
   LicenceEntry(
     kind: LicenceKind.dictionary,

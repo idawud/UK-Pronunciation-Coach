@@ -38,7 +38,6 @@ void main() {
         .map((e) => '${e.name} ${e.licence} ${e.source} ${e.note ?? ''}')
         .join(' ');
     for (final source in [
-      'wav2vec2-base',
       'wav2vec2-lv-60-espeak-cv-ft',
       'silero-vad',
       'Britfone',

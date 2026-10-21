@@ -57,6 +57,8 @@ coverage.xml
 
 # Downloaded model files (GitHub Release assets, never committed)
 assets/models/*.onnx
+# Silero VAD (2.3 MB, MIT) is small enough to commit: bundled for A1's recorder.
+!assets/models/silero_vad.onnx
 assets/models/*-vocab.json
 .model-cache/
 *.iml
