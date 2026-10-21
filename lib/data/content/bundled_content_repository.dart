@@ -10,6 +10,11 @@ import 'britfone_lexicon.dart';
 /// [ContentRepository] over the content bundle in assets/content/ (built by
 /// tools/content/build.py): passages.v1.json, minimal_pairs.json and the Britfone
 /// table britfone.v1.tsv. Everything is read once, lazily, and kept in memory.
+///
+/// Words get their other accepted pronunciations ([WordSpec.alternatives]) from
+/// alternatives.v1.json (passage words: Britfone variants, weak forms, pre-vowel
+/// forms, extra forms and the "-day" / "ex-" rules) and, for custom text, also from
+/// every Britfone variant of the word.
 class BundledContentRepository implements ContentRepository {
   /// Reads the assets from [bundle] (defaults to [rootBundle]).
   BundledContentRepository({AssetBundle? bundle})
@@ -23,20 +28,62 @@ class BundledContentRepository implements ContentRepository {
   static const passagesAsset = 'assets/content/passages.v1.json';
   static const pairsAsset = 'assets/content/minimal_pairs.json';
   static const britfoneAsset = 'assets/content/britfone.v1.tsv';
+  static const alternativesAsset = 'assets/content/alternatives.v1.json';
 
   final Future<String> Function(String path) _load;
 
   Future<_Library>? _library;
   Future<BritfoneLexicon>? _lexicon;
   Future<List<MinimalPair>>? _pairs;
+  Future<Map<String, List<String>>>? _alternatives;
+
+  /// Word (lookup key) -> accepted pronunciations, preferred first. Empty when the
+  /// asset is missing or unreadable: alternatives are a refinement, not required.
+  Future<Map<String, List<String>>> _alts() => _alternatives ??= () async {
+    try {
+      final json =
+          jsonDecode(await _load(alternativesAsset)) as Map<String, dynamic>;
+      return {
+        for (final e in (json['alternatives'] as Map<String, dynamic>).entries)
+          e.key: [for (final p in e.value as List<dynamic>) p as String],
+      };
+    } on Object {
+      return const <String, List<String>>{};
+    }
+  }();
+
+  /// [word] with every pronunciation in [prons] that differs from its own phonemes
+  /// (ignoring stress) as an alternative.
+  static WordSpec _withAlternatives(WordSpec word, Iterable<String> prons) {
+    if (!word.scorable) return word;
+    String plain(List<PhonemeSpec> ps) => ps.map((p) => p.ipa).join(' ');
+    final seen = {plain(word.phonemes)};
+    final alternatives = <List<PhonemeSpec>>[];
+    for (final pron in prons) {
+      final phonemes = BritfoneLexicon.toPhonemes(pron);
+      if (phonemes.isNotEmpty && seen.add(plain(phonemes))) {
+        alternatives.add(phonemes);
+      }
+    }
+    return alternatives.isEmpty
+        ? word
+        : word.copyWith(alternatives: List.unmodifiable(alternatives));
+  }
 
   Future<_Library> get _lib => _library ??= _readLibrary();
 
   Future<_Library> _readLibrary() async {
     final json = jsonDecode(await _load(passagesAsset)) as Map<String, dynamic>;
+    final alts = await _alts();
+    Passage withAlternatives(Passage p) => p.copyWith(
+      words: [
+        for (final w in p.words)
+          _withAlternatives(w, alts[BritfoneLexicon.key(w.text)] ?? const []),
+      ],
+    );
     List<Passage> read(String key) => [
       for (final p in json[key] as List<dynamic>)
-        Passage.fromJson(p as Map<String, dynamic>),
+        withAlternatives(Passage.fromJson(p as Map<String, dynamic>)),
     ];
     final passages = read('passages')
       ..sort(
@@ -69,7 +116,15 @@ class BundledContentRepository implements ContentRepository {
   @override
   Future<List<WordSpec>> lookup(String customText) async {
     if (!BritfoneLexicon.wordPattern.hasMatch(customText)) return const [];
-    return (await lexicon()).lookup(customText);
+    final lexicon = await this.lexicon();
+    final alts = await _alts();
+    return [
+      for (final w in lexicon.lookup(customText))
+        _withAlternatives(w, [
+          ...?alts[BritfoneLexicon.key(w.text)],
+          ...?lexicon.pronunciations(w.text),
+        ]),
+    ];
   }
 
   @override
