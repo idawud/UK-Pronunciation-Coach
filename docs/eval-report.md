@@ -411,3 +411,18 @@ EVAL_MODEL_DIR=/home/idawud/coach-models/release-full/full tools/eval/run_harnes
 `.github/workflows/eval.yml` (manual and weekly) runs the same steps. It skips cleanly until
 the full model is published in `assets/models/manifest.json`, the learner audio is
 configured and `tools/eval/labels/labels.csv` exists.
+
+## Addendum (I1-integration, 2026-10-21): alternative pronunciations
+
+`WordSpec.alternatives` (contract request 2) is now in the app: each word is scored
+against its best-matching accepted form (Britfone variants, weak forms, "-day",
+"ex-"). Re-running the native set with the same posteriors and calibration, adding
+alternatives the way the app does (probe targets excluded):
+
+| Tier | Native false red before | After | Held-out after | Probes red (swap / sub) |
+| --- | --- | --- | --- | --- |
+| full | 3.6% | **1.7%** | 2.2% | 99.6% / 78.8% (unchanged) |
+| light | 7.1% | **5.9%** | 6.6% | 99.6% / 68.0% (unchanged) |
+
+The harness itself still builds passages without alternatives; see
+`docs/handoff/integration.md` for the script and the follow-up.
