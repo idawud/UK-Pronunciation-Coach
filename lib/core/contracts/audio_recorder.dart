@@ -40,6 +40,13 @@ abstract interface class AudioRecorder {
   /// Stops recording, if any, and deletes the partial file. Safe to call at any time.
   Future<void> cancel();
 
+  /// Deletes a finished [clip]'s file: for recordings that are never saved (too quiet
+  /// or noisy, cancelled scoring, sentence / word / placement retries). A no-op when
+  /// the file is already gone; never throws for a missing or undeletable file. Clips
+  /// saved with an attempt belong to `ProgressRepository` (which keeps or deletes
+  /// them per `UserProfile.keepRecordings`), so callers must not discard those.
+  Future<void> discard(AudioClip clip);
+
   /// Input level while recording, about 20 values per second, each in 0.0 (silence)
   /// to 1.0 (full scale), linear in dBFS between -60 dB and 0 dB.
   ///

@@ -444,8 +444,16 @@ void main() {
         ),
       );
       final c = await open(passageArgs, harness: h0);
+      var emitted = 0;
+      final sub = h0.recorder.level.listen((_) => emitted++);
+      addTearDown(sub.cancel);
       await c.startRecording();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      // Wait for every level value (not a fixed 100 ms, which a busy machine can miss).
+      await until(
+        () => emitted == waveformLength + 10,
+        reason: 'all levels emitted',
+      );
+      await pumpEventQueue();
       expect(
         (state().phase as ReadRecording).levels,
         hasLength(waveformLength),
@@ -670,9 +678,29 @@ void main() {
     });
   });
 
-  test('deleteRecordingFile ignores missing files', () async {
-    await deleteRecordingFile('/definitely/not/here.wav');
+  test('a failing discard does not break the run', () async {
+    final recorder = _FailingDiscardRecorder();
+    final c = await open(
+      ReadArgs(passageId: teaPassage.id, mode: ReadMode.word, wordIndex: 0),
+      harness: ReadHarness(recorder: recorder),
+    );
+    final phase = await recordAndStop(c);
+    expect(phase, isA<ReadDone>());
+    expect(recorder.discardCalls, 1);
   });
+}
+
+class _FailingDiscardRecorder extends FakeAudioRecorder {
+  _FailingDiscardRecorder()
+    : super(levels: const [], emitSilenceAfterLevels: false);
+
+  int discardCalls = 0;
+
+  @override
+  Future<void> discard(AudioClip clip) async {
+    discardCalls++;
+    throw StateError('disk gone');
+  }
 }
 
 class _RevokingRecorder extends FakeAudioRecorder {

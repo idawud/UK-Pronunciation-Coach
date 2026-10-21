@@ -55,6 +55,9 @@ class FakeAudioRecorder implements AudioRecorder {
   /// Number of completed [start] calls.
   int startCount = 0;
 
+  /// Clips passed to [discard], in order (the fake has no files to delete).
+  final List<AudioClip> discarded = [];
+
   final List<Segment>? _segments;
   final _level = StreamController<double>.broadcast();
   final _silence = StreamController<void>.broadcast();
@@ -116,6 +119,9 @@ class FakeAudioRecorder implements AudioRecorder {
     _timer = null;
     _recording = false;
   }
+
+  @override
+  Future<void> discard(AudioClip clip) async => discarded.add(clip);
 
   @override
   Stream<double> get level => _level.stream;

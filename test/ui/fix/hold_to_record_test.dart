@@ -16,6 +16,11 @@ class _StartFails extends FakeAudioRecorder {
   Future<void> start() async => throw StateError('mic busy');
 }
 
+class _DiscardFails extends FakeAudioRecorder {
+  @override
+  Future<void> discard(AudioClip clip) async => throw StateError('io');
+}
+
 class _PermissionOnStart extends FakeAudioRecorder {
   @override
   Future<void> start() async =>
@@ -51,7 +56,8 @@ void main() {
   }
 
   testWidgets('scores a held word', (tester) async {
-    final scored = await pump(tester);
+    final recorder = FakeAudioRecorder();
+    final scored = await pump(tester, recorder: recorder);
     expect(find.text('Hold to say "Thursday"'), findsOneWidget);
     final g = await tester.startGesture(
       tester.getCenter(find.byIcon(Icons.mic_none)),
@@ -63,6 +69,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(scored.single.score, 45);
     expect(scored.single.index, 1);
+    // The retry clip is never saved, so it is discarded once scored.
+    expect(recorder.discarded, [recorder.clip]);
+  });
+
+  testWidgets('a failing discard is ignored', (tester) async {
+    final recorder = _DiscardFails();
+    final scored = await pump(tester, recorder: recorder);
+    await holdAndSay(tester);
+    expect(scored, hasLength(1));
+    expect(find.textContaining("Couldn't"), findsNothing);
   });
 
   testWidgets('denied permission asks, then allows', (tester) async {

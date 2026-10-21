@@ -247,6 +247,18 @@ class CoachAudioRecorder implements AudioRecorder {
   }
 
   @override
+  Future<void> discard(AudioClip clip) async {
+    _probabilityCache.remove(clip.path);
+    try {
+      final file = File(clip.path);
+      if (await file.exists()) await file.delete();
+    } on FileSystemException catch (e) {
+      // Best effort: an unsaved clip that cannot be deleted is not worth an error.
+      debugPrint('A1 audio: could not delete ${clip.path} ($e)');
+    }
+  }
+
+  @override
   Stream<double> get level => _level.stream;
 
   @override

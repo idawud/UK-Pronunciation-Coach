@@ -84,6 +84,20 @@ void runAudioRecorderContract(
       await recorder.stop();
     });
 
+    test('discard deletes a finished clip and is safe to repeat', () async {
+      await recorder.start();
+      await Future<void>.delayed(recordFor);
+      final clip = await recorder.stop();
+      await recorder.discard(clip);
+      await recorder.discard(clip); // already gone: no-op
+      await recorder.discard(
+        AudioClip(path: '${clip.path}.missing', duration: Duration.zero),
+      );
+      expect(recorder.isRecording, isFalse);
+      await recorder.start(); // still usable
+      await recorder.stop();
+    });
+
     test('speechSegments are sorted, disjoint and inside the clip', () async {
       await recorder.start();
       await Future<void>.delayed(recordFor);
