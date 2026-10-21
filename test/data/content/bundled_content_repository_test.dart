@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uk_pronunciation_coach/core/contracts/contracts.dart';
+import 'package:uk_pronunciation_coach/core/models/models.dart';
 import 'package:uk_pronunciation_coach/data/content/bundled_content_repository.dart';
 
 import '../../contracts/content_repository_contract.dart';
@@ -42,9 +43,55 @@ void main() {
       await repo.minimalPairs();
       expect(reads, [
         BundledContentRepository.passagesAsset,
+        BundledContentRepository.alternativesAsset,
         BundledContentRepository.britfoneAsset,
         BundledContentRepository.pairsAsset,
       ]);
+    });
+
+    test('passage words carry their other accepted pronunciations', () async {
+      final repo = fromDisk();
+      final words = [for (final p in await repo.all()) ...p.words];
+      String plain(List<PhonemeSpec> ps) => ps.map((p) => p.ipa).join(' ');
+      final from = words.firstWhere((w) => w.text.toLowerCase() == 'from');
+      final forms = from.alternatives.map(plain).toList();
+      expect(forms, isNotEmpty);
+      expect(forms, isNot(contains(plain(from.phonemes))));
+      expect([
+        plain(from.phonemes),
+        ...forms,
+      ], containsAll(['f ɹ ɒ m', 'f ɹ ə m']));
+      // Every alternative differs from the main form and from each other.
+      for (final w in words) {
+        final all = [plain(w.phonemes), ...w.alternatives.map(plain)];
+        expect(all.toSet(), hasLength(all.length), reason: w.text);
+        if (!w.scorable) expect(w.alternatives, isEmpty);
+      }
+      expect(words.where((w) => w.alternatives.isNotEmpty), isNotEmpty);
+    });
+
+    test('lookup adds Britfone variants for custom text', () async {
+      final repo = fromDisk();
+      final words = await repo.lookup('Thursday from xyzzyq');
+      expect(words[0].alternatives, isNotEmpty);
+      expect(words[1].alternatives, isNotEmpty);
+      expect(words[2].scorable, isFalse);
+      expect(words[2].alternatives, isEmpty);
+    });
+
+    test('a missing alternatives file just means no alternatives', () async {
+      final repo = BundledContentRepository.withLoader((path) async {
+        if (path == BundledContentRepository.alternativesAsset) {
+          throw StateError('missing');
+        }
+        return File(path).readAsString();
+      });
+      final passages = await repo.all();
+      expect(passages, hasLength(120));
+      expect(
+        passages.expand((p) => p.words).every((w) => w.alternatives.isEmpty),
+        isTrue,
+      );
     });
 
     test('lookup of text without words does not load the dictionary', () async {
