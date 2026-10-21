@@ -28,14 +28,22 @@ String? hostOrtLibraryPath() {
   return null;
 }
 
-/// The real Silero VAD model if a developer fetched it (see the A1 handoff), else
-/// null. `A1_SILERO_MODEL` overrides the default `.model-cache/vad/silero_vad.onnx`.
+/// The real Silero VAD model: `A1_SILERO_MODEL` if set, else the bundled
+/// `assets/models/silero_vad.onnx` (committed by I1), else a developer's
+/// `.model-cache/vad/silero_vad.onnx`; null when none exists.
 File? cachedSileroModel() {
-  final f = File(
-    Platform.environment['A1_SILERO_MODEL'] ??
-        '.model-cache/vad/silero_vad.onnx',
-  );
-  return f.existsSync() ? f : null;
+  final override = Platform.environment['A1_SILERO_MODEL'];
+  for (final path in [
+    ?override,
+    if (override == null) ...[
+      'assets/models/silero_vad.onnx',
+      '.model-cache/vad/silero_vad.onnx',
+    ],
+  ]) {
+    final f = File(path);
+    if (f.existsSync()) return f;
+  }
+  return null;
 }
 
 /// The tiny Silero-shaped stand-in model (see fixtures/make_tiny_vad.py).
