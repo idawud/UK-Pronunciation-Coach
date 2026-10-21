@@ -54,9 +54,11 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Unit, widget, contract and content tests
-        run: flutter test --coverage --exclude-tags golden
+        run: flutter test --coverage --exclude-tags golden,perf
       - name: Coverage gate (85% engine/practice/data, 70% ui)
         run: python3 tools/ci/coverage_gate.py coverage/lcov.info
+      - name: Timing tests (tag perf), one at a time
+        run: flutter test --tags perf --concurrency=1
       - uses: actions/upload-artifact@v7
         if: always()
         with:

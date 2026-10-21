@@ -2,3 +2,7 @@ tags:
   golden:
     # alchemist golden tests. Readable goldens only render on Linux; CI runs them in
     # the ubuntu "golden" job. Update with: flutter test --update-goldens --tags golden
+  perf:
+    # Timing gates (A3 200-word scoring < 100 ms, C2 1,000 attempts < 200 ms).
+    # scripts/check.sh and CI run them alone, one file at a time, after the main run:
+    #   flutter test --tags perf --concurrency=1
