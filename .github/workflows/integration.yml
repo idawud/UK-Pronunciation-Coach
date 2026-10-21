@@ -107,7 +107,9 @@ jobs:
           # One file per run so a crash in one file can't hide the rest; fails at the end
           # if any file failed. `nice` keeps the builds below the emulator's CPU priority.
           # Kept on one line: the action runs each line separately.
-          script: rc=0; for f in $(find integration_test -name '*_test.dart' | sort); do echo "=== $f"; nice -n 15 flutter test "$f" --reporter expanded || { echo "=== FAILED $f"; rc=1; }; done; exit $rc
+          # e2e files run in aeroplane mode (network off; the journey also fails on any
+          # socket), every other file with the network on (A2 / U4 device checks).
+          script: rc=0; for f in $(find integration_test -name '*_test.dart' | sort); do echo "=== $f"; case "$f" in integration_test/e2e/*) adb shell cmd connectivity airplane-mode enable;; *) adb shell cmd connectivity airplane-mode disable;; esac; nice -n 15 flutter test "$f" --reporter expanded || { echo "=== FAILED $f"; rc=1; }; done; adb shell cmd connectivity airplane-mode disable; exit $rc
 
   ios:
     name: ios-simulator

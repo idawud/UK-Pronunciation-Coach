@@ -6,3 +6,6 @@ tags:
     # Timing gates (A3 200-word scoring < 100 ms, C2 1,000 attempts < 200 ms).
     # scripts/check.sh and CI run them alone, one file at a time, after the main run:
     #   flutter test --tags perf --concurrency=1
+  e2e:
+    # The host mirror of the e2e journey (test/e2e/journey_host_test.dart): real
+    # engine on the bundled light model; skipped when the model is not fetched.
