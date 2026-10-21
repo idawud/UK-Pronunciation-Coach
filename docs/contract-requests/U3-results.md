@@ -1,5 +1,10 @@
 # Contract requests: U3-results
 
+## Status (I1-integration, 2026-10-21)
+
+1. `ClipPlayer` ("play my recording"): **deferred** to v1.1 (record-and-compare is a v1.1 feature).
+2. Delete a retry clip: **done** with `AudioRecorder.discard` (hold-to-record discards each try once scored).
+
 ## 1. Play back the user's own recording (needed for "play" on Results / Fix a word)
 
 **Change.** Add a small playback contract (or extend `VoiceService`), bound in

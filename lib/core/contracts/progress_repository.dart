@@ -19,6 +19,9 @@ abstract interface class ProgressRepository {
   /// [SoundStat.first]). Unless `profile().keepRecordings` is true, deletes the file at
   /// `audioPath` and stores the attempt with `audioPath: null`. Does not touch the
   /// review queue or level (the practice engine does).
+  ///
+  /// Replacing an attempt folds its phonemes into the stats again (an average cannot
+  /// be un-folded), so save each attempt once and use [updateWordResult] for retries.
   Future<void> saveAttempt(AttemptResult attempt);
 
   /// The attempt with [id], or null.
@@ -38,7 +41,9 @@ abstract interface class ProgressRepository {
   ///
   /// Also folds the word's phoneme scores into the sound stats and updates the review
   /// queue: a queued word is rescheduled with [ReviewItem.afterScore] (and removed when
-  /// it graduates); an unqueued word whose new status is red is enqueued.
+  /// it graduates); an unqueued word whose new status is red is enqueued. A word
+  /// enqueued here has empty `ReviewItem.phonemes` (a [WordResult] has no stress
+  /// marks); readers look the word up with `ContentRepository.lookup` when needed.
   ///
   /// Throws [AttemptNotFoundException] for an unknown attempt and [RangeError] for an
   /// index outside the attempt's words.

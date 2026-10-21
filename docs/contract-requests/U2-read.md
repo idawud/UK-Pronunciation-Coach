@@ -1,5 +1,11 @@
 # Contract requests: U2-read
 
+## Status (I1-integration, 2026-10-21)
+
+1. Shared record widget: **deferred** (v1.1 UI tidy-up; both controls work, and the Fix a word one is covered by the e2e journey).
+2. `AudioRecorder.discard`: **done**; `recordingDeleterProvider` is gone and the controller calls `discard`.
+3. Recognition progress / cancel: **deferred** to v1.1 (needs A2 isolate changes).
+
 Nothing here blocks U2. All are optional and small.
 
 ## 1. Share the record button and waveform (optional)

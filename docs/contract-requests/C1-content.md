@@ -1,5 +1,9 @@
 # Contract requests: C1-content
 
+## Status (I1-integration, 2026-10-21)
+
+1. `WordSpec.alternatives`: **done**. `BundledContentRepository` fills it from `alternatives.v1.json` (and Britfone variants for `lookup`); `GopPronunciationScorer` scores each word against its best-matching form. VCTK native false red (full tier): 3.6% -> 1.7% (held-out 3.7% -> 2.2%); probe detection unchanged. See `docs/handoff/integration.md`.
+
 `BundledContentRepository` passes `runContentRepositoryContract` (`fullLibrary: true`)
 unchanged. One optional change, from I2-eval's findings.
 

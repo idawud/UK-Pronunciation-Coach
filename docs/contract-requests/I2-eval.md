@@ -1,5 +1,13 @@
 # Contract / ownership requests from I2-eval
 
+## Status (I1-integration, 2026-10-21)
+
+1. `_hasOwnSpeech` for the `əl` token: **deferred**. It changes how A3 scores dropped sounds and needs a recalibration run (I2); I1 was asked not to change the calibration.
+2. Alternatives: **done** (see C1-content). Native false red, full tier: 3.6% -> 1.7%; light tier: 7.1% -> 5.9%.
+3. Tips only on words that are not green: **done** (`lib/ui/fix/word_practice.dart`).
+4. Dev-side licence rows: **done** (`docs/licences.md`).
+5. VCTK regions in `tools/models/data.py`: **deferred to A4**: fixing p239's accent group changes the light model's training split, so it belongs with the next light-model run.
+
 Found during the engine spike (see docs/eval-report.md). I changed only my own
 folders (`tools/eval/`, `lib/engine/scoring/config/`, `docs/eval-report.md`,
 `.github/workflows/eval.yml`) plus four tests in `test/engine/scoring/` that asserted
