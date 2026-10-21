@@ -36,7 +36,8 @@ const Duration _tick = Duration(milliseconds: 100);
 ///
 /// Also owns two jobs nobody else does:
 /// - **Model tier.** Before recognising it makes sure a tier is loaded: the user's
-///   `UserProfile.tierOverride` if set, else `recommendedTier()`; when that tier is
+///   `UserProfile.tierOverride` if set, else full when downloaded and light
+///   otherwise ([preferredTier]); when that tier is
 ///   not on the phone it falls back to the other one (light), and when neither is, it
 ///   waits for a running full-model download. It warms the model up when the screen
 ///   opens.
@@ -67,6 +68,9 @@ class ScoringController extends Notifier<ReadState> {
   final List<double> _levels = [];
   Future<void>? _warmUp;
   ModelTier? _wantedTier;
+
+  /// True when Settings forces the light tier (no download notice then).
+  bool _overrideLight = false;
   AudioClip? _unsavedClip;
   bool _starting = false;
   bool _stopping = false;
@@ -171,15 +175,16 @@ class ScoringController extends Notifier<ReadState> {
 
   /// Makes sure a model tier is loaded and returns it.
   ///
-  /// Wanted tier: `UserProfile.tierOverride`, else `recommendedTier()`. If it is not
-  /// on the phone, uses the other tier (in practice: light while full is not
-  /// downloaded). With [wait], when no tier is on the phone but the full model is
+  /// Wanted tier: [preferredTier] (`UserProfile.tierOverride`, else full once it is
+  /// downloaded and light before). If it is not on the phone, uses the other tier
+  /// (in practice: light while full is not downloaded). With [wait], when no tier is on the phone but the full model is
   /// downloading, waits for the download (showing its progress) before loading it.
   /// Throws [ModelNotAvailableException] when no tier can be loaded.
   Future<ModelTier> _prepareModel({required bool wait, int? run}) async {
     final profile = await _progress.profile();
-    final wanted = profile.tierOverride ?? await _recognizer.recommendedTier();
+    final wanted = await preferredTier(_recognizer, profile);
     _wantedTier = wanted;
+    _overrideLight = profile.tierOverride == ModelTier.light;
     _refreshDownloadNotice();
     ModelTier? tier;
     if (await _recognizer.isTierAvailable(wanted)) {
@@ -222,7 +227,8 @@ class ScoringController extends Notifier<ReadState> {
   void _refreshDownloadNotice() {
     if (!ref.mounted) return;
     final status = _recognizer.downloadStatus;
-    if (_wantedTier == ModelTier.full && status.isActive) {
+    // Auto and a Full override both want the full tier while it downloads.
+    if (_wantedTier != null && !_overrideLight && status.isActive) {
       state = state.copyWith(downloadNotice: status);
     } else if (state.downloadNotice != null) {
       state = state.copyWith(clearDownloadNotice: true);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,5 +36,48 @@ void main() {
     app.main();
     await tester.pumpAndSettle();
     expect(find.byType(CoachApp), findsOneWidget);
+  });
+
+  testWidgets('start-up shows loading, then an error with Try again', (
+    tester,
+  ) async {
+    debugUseFakesOverride = false;
+    addTearDown(() => debugUseFakesOverride = true);
+    final progress = FakeProgressRepository();
+    var attempts = 0;
+    final gate = Completer<void>();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          progressStoreProvider.overrideWith((ref) async {
+            attempts++;
+            if (attempts == 1) {
+              await gate.future;
+              throw StateError('database locked');
+            }
+            return progress;
+          }),
+          recognizerStoreProvider.overrideWith(
+            (ref) async => FakePhonemeRecognizer(),
+          ),
+          // Everything else stays fake: this test is about start-up only.
+          audioRecorderProvider.overrideWith((ref) => FakeAudioRecorder()),
+          voiceServiceProvider.overrideWith((ref) => FakeVoiceService()),
+          contentRepositoryProvider.overrideWith(
+            (ref) => FakeContentRepository(),
+          ),
+        ],
+        child: const CoachApp(),
+      ),
+    );
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.text("The app couldn't start"), findsOneWidget);
+    await tester.tap(find.text('Try again'));
+    await tester.pumpAndSettle();
+    // The retry runs the failed step again; this time it works.
+    expect(attempts, 2);
+    expect(find.text('Get started'), findsOneWidget);
   });
 }

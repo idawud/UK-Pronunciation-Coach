@@ -102,7 +102,7 @@ void main() {
   });
 
   group('model tier', () {
-    test('warms up the recommended tier when it is on the phone', () async {
+    test('Auto warms up the full tier when it is on the phone', () async {
       await open(
         passageArgs,
         harness: ReadHarness(recognizer: TestRecognizer(fullAvailable: true)),
@@ -111,6 +111,24 @@ void main() {
       expect(h.recognizer.loads, [ModelTier.full]);
       expect(controller().wantedTier, ModelTier.full);
     });
+
+    test(
+      'Auto prefers a downloaded full tier over the recommendation',
+      () async {
+        final c = await open(
+          passageArgs,
+          harness: ReadHarness(
+            recognizer: TestRecognizer(
+              recommended: ModelTier.light,
+              fullAvailable: true,
+            ),
+          ),
+        );
+        await recordAndStop(c);
+        expect(c.wantedTier, ModelTier.full);
+        expect((state().phase as ReadDone).result.tier, ModelTier.full);
+      },
+    );
 
     test('falls back to light when full is not downloaded', () async {
       final c = await open(passageArgs);
