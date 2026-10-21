@@ -6,7 +6,6 @@ import 'package:uk_pronunciation_coach/core/contracts/contracts.dart';
 import 'package:uk_pronunciation_coach/core/fakes/fakes.dart';
 import 'package:uk_pronunciation_coach/core/models/models.dart';
 import 'package:uk_pronunciation_coach/core/providers.dart';
-import 'package:uk_pronunciation_coach/ui/read/scoring_controller.dart';
 
 /// [FakePhonemeRecognizer] with switchable light availability, a load log, an
 /// optional gate that holds `recognise` until released, and an optional failure.
@@ -103,7 +102,9 @@ class ReadHarness {
   late final progress = FakeProgressRepository(clock: () => now);
   late final engine = SpyPracticeEngine(content: content, progress: progress);
   final scorer = FakePronunciationScorer();
-  final List<String> deleted = [];
+
+  /// Paths of the clips the controller discarded (never saved).
+  List<String> get deleted => [for (final c in recorder.discarded) c.path];
   DateTime now = DateTime(2026, 10, 19, 9);
 
   List<Override> get overrides => [
@@ -114,8 +115,5 @@ class ReadHarness {
     contentRepositoryProvider.overrideWithValue(content),
     progressRepositoryProvider.overrideWithValue(progress),
     practiceEngineProvider.overrideWithValue(engine),
-    recordingDeleterProvider.overrideWithValue((path) async {
-      deleted.add(path);
-    }),
   ];
 }

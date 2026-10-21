@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,24 +7,6 @@ import '../../core/contracts/contracts.dart';
 import '../../core/models/models.dart';
 import '../../core/providers.dart';
 import 'read_state.dart';
-
-/// Deletes a recording file that will not be saved. Must not throw.
-typedef RecordingDeleter = Future<void> Function(String path);
-
-/// How unsaved recordings are deleted. Tests override it to record the calls.
-final recordingDeleterProvider = Provider<RecordingDeleter>(
-  (ref) => deleteRecordingFile,
-);
-
-/// Deletes the file at [path] if it exists, ignoring every error.
-Future<void> deleteRecordingFile(String path) async {
-  try {
-    final file = File(path);
-    if (await file.exists()) await file.delete();
-  } on Object {
-    // Best effort: an unsaved clip that cannot be deleted is not worth an error.
-  }
-}
 
 /// The Read screen's controller, one per [ReadArgs] (the route's argument object).
 final scoringControllerProvider = NotifierProvider.autoDispose
@@ -75,7 +56,6 @@ class ScoringController extends Notifier<ReadState> {
   late ProgressRepository _progress;
   late ContentRepository _content;
   late Clock _clock;
-  late RecordingDeleter _delete;
 
   StreamSubscription<double>? _levelSub;
   StreamSubscription<void>? _silenceSub;
@@ -87,7 +67,7 @@ class ScoringController extends Notifier<ReadState> {
   final List<double> _levels = [];
   Future<void>? _warmUp;
   ModelTier? _wantedTier;
-  String? _unsavedClip;
+  AudioClip? _unsavedClip;
   bool _starting = false;
   bool _stopping = false;
 
@@ -103,7 +83,6 @@ class ScoringController extends Notifier<ReadState> {
     _progress = ref.read(progressRepositoryProvider);
     _content = ref.read(contentRepositoryProvider);
     _clock = ref.read(clockProvider);
-    _delete = ref.read(recordingDeleterProvider);
     ref.onDispose(_dispose);
     unawaited(_load());
     return const ReadState(phase: ReadLoading());
@@ -370,7 +349,7 @@ class ScoringController extends Notifier<ReadState> {
       return;
     }
     _stopping = false;
-    _unsavedClip = clip.path;
+    _unsavedClip = clip;
     if (!ref.mounted || run != _run) {
       await _discardClip();
       return;
@@ -551,9 +530,14 @@ class ScoringController extends Notifier<ReadState> {
   }
 
   Future<void> _discardClip() async {
-    final path = _unsavedClip;
+    final clip = _unsavedClip;
     _unsavedClip = null;
-    if (path != null) await _delete(path);
+    if (clip == null) return;
+    try {
+      await _recorder.discard(clip);
+    } on Object {
+      // Best effort: an unsaved clip that cannot be deleted is not worth an error.
+    }
   }
 
   // ---------------------------------------------------------------------------

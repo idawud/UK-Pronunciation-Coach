@@ -115,8 +115,9 @@ class _HoldToRecordButtonState extends ConsumerState<HoldToRecordButton> {
 
   Future<void> _finish() async {
     _set(() => _state = _RecState.scoring);
+    AudioClip? clip;
     try {
-      final clip = await _recorder.stop();
+      clip = await _recorder.stop();
       final problem = _clipProblem(clip);
       if (problem != null) {
         _set(() {
@@ -145,6 +146,17 @@ class _HoldToRecordButtonState extends ConsumerState<HoldToRecordButton> {
         _message = "Couldn't score that. Please try again.";
         _state = _RecState.idle;
       });
+    } finally {
+      // A retry clip is never saved: delete it once scored (or rejected).
+      if (clip != null) unawaited(_discard(clip));
+    }
+  }
+
+  Future<void> _discard(AudioClip clip) async {
+    try {
+      await _recorder.discard(clip);
+    } on Object {
+      // Best effort.
     }
   }
 

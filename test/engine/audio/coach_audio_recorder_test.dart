@@ -147,6 +147,32 @@ void main() {
   });
 
   group('recording', () {
+    test('discard deletes the clip file and forgets its VAD cache', () async {
+      final (r, clip) = await recordFixture('clean_read.wav');
+      expect(File(clip.path).existsSync(), isTrue);
+      await r.discard(clip);
+      expect(File(clip.path).existsSync(), isFalse);
+      await r.discard(clip); // already gone: no-op
+      // The cached probabilities are gone too, so speechSegments re-reads the file.
+      await expectLater(
+        r.speechSegments(clip),
+        throwsA(isA<FileSystemException>()),
+      );
+      await r.dispose();
+    });
+
+    test('discard ignores a file it cannot delete', () async {
+      final (r, clip) = await recordFixture('clean_read.wav');
+      // A file in a read-only folder: delete() throws FileSystemException.
+      final locked = Directory('${dir.path}/locked')..createSync();
+      final file = File('${locked.path}/a.wav')..writeAsStringSync('x');
+      Process.runSync('chmod', ['555', locked.path]);
+      addTearDown(() => Process.runSync('chmod', ['755', locked.path]));
+      await r.discard(AudioClip(path: file.path, duration: Duration.zero));
+      await r.discard(clip);
+      await r.dispose();
+    }, testOn: 'linux || mac-os');
+
     test('writes a 16 kHz WAV identical to the input', () async {
       final (r, clip) = await recordFixture('clean_read.wav');
       expect(clip.path, startsWith(dir.path));
