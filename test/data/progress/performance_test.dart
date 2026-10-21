@@ -1,3 +1,8 @@
+// Timing test: tagged `perf`, so scripts/check.sh and CI run it on its own, after
+// the parallel test run, instead of next to hundreds of other tests.
+@Tags(['perf'])
+library;
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uk_pronunciation_coach/core/fakes/sample_data.dart';
@@ -32,11 +37,11 @@ void main() {
       }
     });
 
-    // Best of 5 runs: the first warms the JIT and statement cache, and the minimum
-    // filters out scheduling noise on shared CI machines.
+    // Best of 10 runs: the first warms the JIT and statement cache, and the minimum
+    // filters out scheduling noise on shared machines.
     var best = const Duration(days: 1);
     late List<AttemptResult> all;
-    for (var run = 0; run < 5; run++) {
+    for (var run = 0; run < 10; run++) {
       final sw = Stopwatch()..start();
       all = await repo.attempts();
       sw.stop();
@@ -48,7 +53,7 @@ void main() {
     expect(all.first.words.first.phonemes, isNotEmpty);
     // ignore: avoid_print
     print(
-      'Loaded 1,000 attempts (60,000 words) in ${best.inMilliseconds} ms (best of 5)',
+      'Loaded 1,000 attempts (60,000 words) in ${best.inMilliseconds} ms (best of 10)',
     );
     expect(best, lessThan(const Duration(milliseconds: 200)));
   });

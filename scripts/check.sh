@@ -37,13 +37,16 @@ git ls-files -co --exclude-standard -- '*.dart' |
 step "flutter analyze --fatal-infos"
 flutter analyze --fatal-infos
 
-step "flutter test --coverage"
+step "flutter test --coverage (timing tests excluded)"
 if [[ "$(uname -s)" == "Linux" && $QUICK == 0 ]]; then
-  flutter test --coverage
+  flutter test --coverage --exclude-tags perf
 else
   echo "(golden tests skipped: readable goldens only render on Linux; CI runs them)"
-  flutter test --coverage --exclude-tags golden
+  flutter test --coverage --exclude-tags golden,perf
 fi
+
+step "timing tests (tag perf), one at a time"
+flutter test --tags perf --concurrency=1
 
 step "coverage gate"
 "$PY" tools/ci/coverage_gate.py coverage/lcov.info
