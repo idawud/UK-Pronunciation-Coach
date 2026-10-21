@@ -3,16 +3,20 @@
 // Loads the bundled Roboto and Material Icons fonts from test/fixtures/fonts/ so golden
 // images render real text identically on every Linux machine, and configures alchemist:
 // readable "platform" goldens only on Linux (CI and local Linux), obscured-text "ci"
-// goldens everywhere.
+// goldens everywhere. Also binds every provider to its fake by default
+// (lib/core/providers.dart, debugUseFakesOverride): the app uses the real
+// implementations, and a test that wants them overrides the providers itself.
 import 'dart:async';
 import 'dart:io';
 
 import 'package:alchemist/alchemist.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:uk_pronunciation_coach/core/providers.dart';
 
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   TestWidgetsFlutterBinding.ensureInitialized();
+  debugUseFakesOverride = true;
   await loadTestFonts();
   return AlchemistConfig.runWithConfig(
     config: AlchemistConfig(

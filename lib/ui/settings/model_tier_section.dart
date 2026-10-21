@@ -21,7 +21,7 @@ class ModelTierSection extends ConsumerStatefulWidget {
 
 /// The three tier choices: automatic (recommended), light, full.
 enum TierChoice {
-  /// Use the recommended tier.
+  /// Full once it is downloaded, else light (`preferredTier` in core/providers).
   auto,
 
   /// Always light.
@@ -115,7 +115,8 @@ class _ModelTierSectionState extends ConsumerState<ModelTierSection> {
         children: [
           Text(
             'Light is built in and gives word scores. Full adds a score for '
-            'every sound and needs a one-time $size download.',
+            'every sound and needs a one-time $size download. Auto uses Full '
+            'once it is downloaded.',
             style: t.bodyMedium,
           ),
           if (recommended != null) ...[
