@@ -50,10 +50,20 @@ void runPronunciationScorerContract(
           expect(w.score, 0);
           continue;
         }
-        expect(w.phonemes.length, spec.phonemes.length);
+        // Scored against the main pronunciation or one of the alternatives.
+        final heardAs = [spec.phonemes, ...spec.alternatives].firstWhere(
+          (form) =>
+              form.length == w.phonemes.length &&
+              [
+                for (var j = 0; j < form.length; j++)
+                  form[j].ipa == w.phonemes[j].expected,
+              ].every((ok) => ok),
+          orElse: () => fail('${w.text}: phonemes match no pronunciation'),
+        );
+        expect(w.phonemes.length, heardAs.length);
         for (var j = 0; j < w.phonemes.length; j++) {
           final ph = w.phonemes[j];
-          expect(ph.expected, spec.phonemes[j].ipa);
+          expect(ph.expected, heardAs[j].ipa);
           expect(ph.score, inInclusiveRange(0, 100));
           expect(ph.start, lessThanOrEqualTo(ph.end));
           expect(ph.start, greaterThanOrEqualTo(Duration.zero));
@@ -165,6 +175,58 @@ void runPronunciationScorerContract(
         final r = scorer.score(riverPassage, post, syntheticSpeech(post));
         expect(r.words[6].status, WordStatus.missed);
         expect(r.words[6].score, 0);
+      });
+
+      group('alternative pronunciations', () {
+        // "a" in the tea passage: main /ə/, read as the strong form /eɪ/.
+        const strong = [PhonemeSpec(ipa: 'eɪ', stress: 1)];
+        Passage withWord(List<PhonemeSpec> phonemes, {bool alt = false}) =>
+            teaPassage.copyWith(
+              words: [
+                for (final w in teaPassage.words)
+                  w.index == 2
+                      ? w.copyWith(
+                          phonemes: phonemes,
+                          alternatives: alt ? [strong] : const [],
+                        )
+                      : w,
+              ],
+            );
+        final spoken = syntheticPosteriors(withWord(strong));
+        final speech = syntheticSpeech(spoken);
+        final mainOnly = withWord(teaPassage.words[2].phonemes);
+        final withAlt = withWord(teaPassage.words[2].phonemes, alt: true);
+
+        test('a word read as an accepted alternative scores as good', () {
+          final r = scorer.score(withAlt, spoken, speech);
+          checkWellFormed(r, withAlt, spoken);
+          expect(r.words[2].status, WordStatus.good);
+          expect(r.words[2].phonemes.single.expected, 'eɪ');
+          final without = scorer.score(mainOnly, spoken, speech);
+          expect(r.words[2].score, greaterThan(without.words[2].score));
+          expect(r.accuracy, greaterThanOrEqualTo(without.accuracy));
+        });
+
+        test('the main pronunciation still wins when it was said', () {
+          final post = syntheticPosteriors(mainOnly);
+          final r = scorer.score(withAlt, post, syntheticSpeech(post));
+          expect(r.words[2].status, WordStatus.good);
+          expect(r.words[2].phonemes.single.expected, 'ə');
+        });
+
+        test('scoreWord tries the alternatives too', () {
+          final word = withAlt.words[2];
+          final single = syntheticPosteriors(withWord(strong).slice(2, 3));
+          final w = scorer.scoreWord(word, single);
+          expect(w.status, WordStatus.good);
+          expect(w.index, 2);
+          expect(
+            scorer
+                .scoreWord(word.copyWith(alternatives: const []), single)
+                .score,
+            lessThan(w.score),
+          );
+        });
       });
 
       test('scoreWord: perfect is good, substituted is worse', () {
