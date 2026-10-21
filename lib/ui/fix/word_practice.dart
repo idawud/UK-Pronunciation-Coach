@@ -54,7 +54,11 @@ class WordPractice extends ConsumerWidget {
     final phonemes = result.phonemes;
     final showSounds = !lightTier && phonemes.isNotEmpty;
     final issues = showSounds && hasSoundIssues(phonemes);
-    final worst = showSounds ? worstSound(phonemes) : null;
+    // No tip on a green word: the full model hears British vowels before a written
+    // r as r-coloured, so a tip there would flag correct native speech (I2).
+    final worst = showSounds && result.status != WordStatus.good
+        ? worstSound(phonemes)
+        : null;
     final tip = worst == null
         ? null
         : ref.read(tipsProvider).tipFor(worst.expected, worst.heard);
