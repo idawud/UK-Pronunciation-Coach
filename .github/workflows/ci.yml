@@ -53,7 +53,14 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - name: Unit, widget, contract and content tests
+      - name: Model files cache (keyed by the SHA-256 manifest)
+        uses: actions/cache@v6
+        with:
+          path: .model-cache
+          key: models-light-${{ hashFiles('assets/models/manifest.json') }}
+      - name: Fetch the bundled light model (the host e2e journey needs it)
+        run: python3 tools/ci/fetch_models.py --tier light --cache .model-cache
+      - name: Unit, widget, contract, content and host e2e tests
         run: flutter test --coverage --exclude-tags golden,perf
       - name: Coverage gate (85% engine/practice/data, 70% ui)
         run: python3 tools/ci/coverage_gate.py coverage/lcov.info
