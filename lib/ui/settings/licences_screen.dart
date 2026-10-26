@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'bundled_licences.dart';
 import 'licence_data.dart';
 
 /// Licences: every shipped model, dictionary, voice, content set, engine and font
@@ -54,10 +55,13 @@ class LicencesScreen extends StatelessWidget {
                   'Licences of the code libraries in the app',
                 ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => showLicensePage(
-                  context: context,
-                  applicationName: 'UK Pronunciation Coach',
-                ),
+                onTap: () {
+                  registerBundledLicences();
+                  showLicensePage(
+                    context: context,
+                    applicationName: 'UK Pronunciation Coach',
+                  );
+                },
               ),
             ],
           ),
