@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Microphone: recordings stay on the device (A1). -->
+    <!-- Microphone: recordings stay on the phone and are deleted after scoring unless
+         the user keeps them (A1). Android shows no custom text for this permission;
+         the onboarding screen explains it before the system prompt. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Only for the one-time optional full-model download over Wi-Fi (A2). -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -70,6 +72,12 @@
              its voices under API 30+ package visibility. -->
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <!-- url_launcher (R1-release): "Send feedback" opens an email draft in the
+             user's mail app. Nothing is sent by the app itself. -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
         </intent>
     </queries>
 </manifest>
