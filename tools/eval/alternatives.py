@@ -21,9 +21,7 @@ from tools.content.lexicon import Lexicon, norm_key, strip_stress, to_phonemes
 
 def plain(phonemes: Iterable[dict | str]) -> str:
     """Phoneme sequence without stress, e.g. "ð ə"."""
-    return " ".join(
-        strip_stress(p["ipa"] if isinstance(p, dict) else p) for p in phonemes
-    )
+    return " ".join(strip_stress(p["ipa"] if isinstance(p, dict) else p) for p in phonemes)
 
 
 class Alternatives:
@@ -70,8 +68,6 @@ def add_alternatives(
     added = 0
     for p in passages:
         for w in p["words"]:
-            w["alternatives"] = (
-                [] if exclude.get(p["id"]) == w["index"] else table.forms(w)
-            )
+            w["alternatives"] = [] if exclude.get(p["id"]) == w["index"] else table.forms(w)
             added += bool(w["alternatives"])
     return added
