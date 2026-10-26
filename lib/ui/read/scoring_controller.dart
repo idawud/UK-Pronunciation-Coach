@@ -16,6 +16,15 @@ final scoringControllerProvider = NotifierProvider.autoDispose
 /// 0.35-0.75 for the full tier on a desktop CPU.
 const double recognitionRealTimeFactor = 0.5;
 
+/// Recognise the recording while the user reads, when the recorder and recognizer
+/// support it (`LiveAudioSource` + `IncrementalPhonemeRecognizer`), so that on stop
+/// only the last stretch of speech is left. `--dart-define=LIVE_SCORING=false`
+/// turns it off (for measuring the difference on a phone).
+const bool liveScoringDefault = bool.fromEnvironment(
+  'LIVE_SCORING',
+  defaultValue: true,
+);
+
 /// Recording stops by itself after this long (a level-6 passage takes ~90 s).
 const Duration maxRecordingDuration = Duration(minutes: 3);
 
@@ -61,6 +70,14 @@ class ScoringController extends Notifier<ReadState> {
   StreamSubscription<double>? _levelSub;
   StreamSubscription<void>? _silenceSub;
   StreamSubscription<ModelDownloadProgress>? _downloadSub;
+  StreamSubscription<LiveAudioBlock>? _liveSub;
+  LiveRecognition? _live;
+
+  /// The live recognition [_score] is finishing (dropped by [cancelScoring]).
+  LiveRecognition? _finishing;
+
+  /// Whether to recognise while recording (see [liveScoringDefault]).
+  bool liveScoring = liveScoringDefault;
   Timer? _recordTicker;
   Timer? _estimateTicker;
   Completer<void>? _downloadWait;
@@ -266,13 +283,16 @@ class ScoringController extends Notifier<ReadState> {
       _silenceSub = _recorder.silenceDetected.listen(
         (_) => unawaited(stopRecording()),
       );
+      _startLive();
       try {
         await _recorder.start();
       } on MicPermissionException catch (e) {
+        _dropLive();
         _stopStreams();
         _setPermissionDenied(e.state);
         return;
       } on Object {
+        _dropLive();
         _stopStreams();
         _set(
           const ReadFailed(
@@ -283,6 +303,7 @@ class ScoringController extends Notifier<ReadState> {
         return;
       }
       if (!ref.mounted) {
+        _dropLive();
         await _recorder.cancel();
         return;
       }
@@ -292,6 +313,40 @@ class ScoringController extends Notifier<ReadState> {
     } finally {
       _starting = false;
     }
+  }
+
+  /// Starts live recognition of the recording about to start (subscribed before
+  /// `start`, so the first block is not missed).
+  void _startLive() {
+    _dropLive();
+    final Object source = _recorder;
+    final Object recognizer = _recognizer;
+    if (!liveScoring ||
+        source is! LiveAudioSource ||
+        recognizer is! IncrementalPhonemeRecognizer) {
+      return;
+    }
+    try {
+      final live = _live = recognizer.startLiveRecognition();
+      _liveSub = source.liveAudio.listen((block) {
+        try {
+          live.add(block);
+        } on Object {
+          // Never disturb the recording: score the whole clip instead.
+          if (identical(_live, live)) _dropLive();
+        }
+      });
+    } on Object {
+      _dropLive();
+    }
+  }
+
+  /// Stops feeding live recognition and drops it (its background work is skipped).
+  void _dropLive() {
+    unawaited(_liveSub?.cancel());
+    _liveSub = null;
+    _live?.cancel();
+    _live = null;
   }
 
   void _setPermissionDenied(MicPermission permission) => _set(
@@ -349,7 +404,11 @@ class ScoringController extends Notifier<ReadState> {
     try {
       _stopStreams();
       clip = await _recorder.stop();
+      // Every block has been delivered by now; keep the session for scoring.
+      unawaited(_liveSub?.cancel());
+      _liveSub = null;
     } on Object {
+      _dropLive();
       _stopping = false;
       _set(const ReadFailed('Recording failed. Please try again.'));
       return;
@@ -357,6 +416,7 @@ class ScoringController extends Notifier<ReadState> {
     _stopping = false;
     _unsavedClip = clip;
     if (!ref.mounted || run != _run) {
+      _dropLive();
       await _discardClip();
       return;
     }
@@ -370,6 +430,7 @@ class ScoringController extends Notifier<ReadState> {
       }
     }
     if (clip.quality != AudioQuality.ok) {
+      _dropLive();
       await _discardClip();
       _set(
         ReadRetryNeeded(
@@ -387,6 +448,7 @@ class ScoringController extends Notifier<ReadState> {
   Future<void> discardRecording() async {
     if (state.phase is! ReadRecording) return;
     _run++;
+    _dropLive();
     _stopStreams();
     await _recorder.cancel();
     _set(const ReadIdle());
@@ -403,6 +465,9 @@ class ScoringController extends Notifier<ReadState> {
   }
 
   Future<void> _score(AudioClip clip, int run) async {
+    // Taken now; dropped in `finally` whatever happens (a no-op once finished).
+    final live = _finishing = _live;
+    _live = null;
     try {
       _setScoring(run, ScoringStage.checkingAudio, 0.05);
       final speech = await _recorder.speechSegments(clip);
@@ -418,10 +483,12 @@ class ScoringController extends Notifier<ReadState> {
       await _prepareModel(wait: true, run: run);
       if (_stale(run)) return;
       _setScoring(run, ScoringStage.recognising, 0.15);
-      _startEstimate(clip.duration, run);
+      _startEstimate(live?.pendingAudio ?? clip.duration, run);
       final PhonemePosteriors posteriors;
       try {
-        posteriors = await _recognizer.recognise(clip);
+        posteriors = live != null
+            ? await live.finish(clip)
+            : await _recognizer.recognise(clip);
       } finally {
         _estimateTicker?.cancel();
         _estimateTicker = null;
@@ -453,6 +520,9 @@ class ScoringController extends Notifier<ReadState> {
       if (_stale(run)) return;
       await _discardClip();
       _set(const ReadFailed('Something went wrong while scoring. Try again.'));
+    } finally {
+      live?.cancel();
+      if (identical(_finishing, live)) _finishing = null;
     }
   }
 
@@ -523,6 +593,8 @@ class ScoringController extends Notifier<ReadState> {
     final phase = state.phase;
     if (phase is! ReadScoring || phase.stage == ScoringStage.saving) return;
     _run++;
+    _finishing?.cancel();
+    _finishing = null;
     _estimateTicker?.cancel();
     _estimateTicker = null;
     _completeDownloadWait();
@@ -608,6 +680,8 @@ class ScoringController extends Notifier<ReadState> {
 
   void _dispose() {
     _run++;
+    _dropLive();
+    _finishing?.cancel();
     _recordTicker?.cancel();
     _estimateTicker?.cancel();
     _completeDownloadWait();
