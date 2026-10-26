@@ -96,6 +96,7 @@ void main() {
         passages: passages,
         source: source,
         configs: parseConfigs(_env['EVAL_CONFIGS'] ?? ''),
+        features: _env['EVAL_FEATURES'] == '1',
         log: (m) => stdout.writeln(m),
       );
       final dir = Directory(_env['EVAL_OUT'] ?? 'tools/eval/work/out');

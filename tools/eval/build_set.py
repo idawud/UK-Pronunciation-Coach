@@ -35,6 +35,7 @@ from pathlib import Path
 import numpy as np
 
 from tools.eval import lexicon as lx
+from tools.eval.alternatives import add_alternatives
 
 EVALSET_DIR = Path(__file__).parent / "evalset"
 DEFAULT_OUT = Path(__file__).parent / "data" / "evalset"
@@ -313,9 +314,19 @@ def make_lexicon(britfone: Path | None) -> lx.Lexicon:
     return lx.Lexicon.load(path, espeak=lx.find_espeak())
 
 
-def write_items(rows: list[tuple[str, str, str, str]], lex: lx.Lexicon, out: Path) -> int:
-    """Writes `<out>/passages.json` and `<out>/manifest.tsv`; returns the item count."""
+def write_items(
+    rows: list[tuple[str, str, str, str]],
+    lex: lx.Lexicon,
+    out: Path,
+    alternatives: bool = True,
+) -> int:
+    """Writes `<out>/passages.json` and `<out>/manifest.tsv`; returns the item count.
+    With [alternatives], each word also lists its other accepted pronunciations, as
+    in the app (a probe's target word gets none: its expected form is the probe)."""
     passages, manifest = build_items(rows, lex)
+    if alternatives:
+        targets = {m["passage"]: int(m["target"]) for m in manifest if m["target"]}
+        add_alternatives(passages, exclude=targets)
     out.mkdir(parents=True, exist_ok=True)
     (out / "passages.json").write_text(dump_passages(passages), encoding="utf-8")
     write_tsv(out / "manifest.tsv", manifest, MANIFEST_FIELDS)

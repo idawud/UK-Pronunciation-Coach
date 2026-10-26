@@ -27,12 +27,14 @@ import os
 import sys
 import time
 import wave
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
 
 from tools.eval import lexicon as lx
 from tools.eval.agreement import LABEL_FIELDS
+from tools.eval.alternatives import Alternatives, add_alternatives
 from tools.eval.build_set import EVALSET_DIR, clip_rows, dump_passages, write_tsv
 from tools.eval.synth import augment, inject, phonemes, sentences
 from tools.eval.synth.voices import DEFAULT_DIR, VOICES, Voice, available, fetch
@@ -62,9 +64,18 @@ def reads_sentence(voice: Voice, index: int, share: int = TUNE_SHARE) -> bool:
 
 
 def plan_items(
-    passages: list[dict], voices: list[Voice], share: int = TUNE_SHARE
+    passages: list[dict],
+    voices: list[Voice],
+    share: int = TUNE_SHARE,
+    accepted: Callable[[str, list[str]], bool] | None = None,
 ) -> tuple[list, list, list]:
-    """(manifest rows, label rows, item rows) for every sentence x voice x read."""
+    """(manifest rows, label rows, item rows) for every sentence x voice x read.
+
+    [accepted] says whether a word's phonemes are one of its accepted pronunciations
+    (`Alternatives.accepts`). An injected substitution that turns a word into another
+    accepted form (e.g. "been" read /biːn/) is labelled `right`: the app accepts it
+    and so would a teacher. Stress errors stay `wrong` (phonemes cannot show stress).
+    """
     manifest, labels, items = [], [], []
     for n, p in enumerate(passages):
         words = [w for w in p["words"] if w["scorable"]]
@@ -114,6 +125,14 @@ def plan_items(
                 )
                 for w in words:
                     e = by_index.get(w["index"]) if read == "error" else None
+                    note = e.detail if e else ""
+                    if (
+                        e
+                        and e.kind != "stress"
+                        and accepted
+                        and accepted(w["text"], [p for p, _ in e.phones])
+                    ):
+                        e, note = None, f"{note} (accepted form)"
                     labels.append(
                         {
                             "item": item,
@@ -123,7 +142,7 @@ def plan_items(
                             "word": w["text"],
                             "label": "wrong" if e else "right",
                             "teacher": "synthetic",
-                            "notes": e.detail if e else "",
+                            "notes": note,
                             "error": e.kind if e else "",
                             "voice": v.name,
                             "split": v.split,
@@ -143,9 +162,19 @@ def load_passages(britfone: Path | None = None) -> list[dict]:
 
 
 def write_plan(
-    out: Path, passages: list[dict], voices: list[Voice], share: int = TUNE_SHARE
+    out: Path,
+    passages: list[dict],
+    voices: list[Voice],
+    share: int = TUNE_SHARE,
+    alternatives: Alternatives | None = None,
 ) -> dict:
-    manifest, labels, items = plan_items(passages, voices, share)
+    """Writes the plan. With [alternatives], passage words list their other accepted
+    pronunciations, as in the app (the audio does not change)."""
+    accepted = None
+    if alternatives is not None:
+        add_alternatives(passages, table=alternatives)
+        accepted = alternatives.accepts
+    manifest, labels, items = plan_items(passages, voices, share, accepted)
     out.mkdir(parents=True, exist_ok=True)
     (out / "passages.json").write_text(dump_passages(passages), encoding="utf-8")
     write_tsv(out / "manifest.tsv", manifest, MANIFEST_FIELDS)
@@ -310,7 +339,11 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - CLI wiring
         print(f"{len(rows)} sentences -> {sentences.SENTENCES_TSV}")
         return 0
     if args.step == "plan":
-        stats = write_plan(args.out, load_passages(args.britfone), voices, args.tune_share)
+        passages = load_passages(args.britfone)
+        alts = Alternatives.for_words(
+            w["text"] for p in passages for w in p["words"] if w["scorable"]
+        )
+        stats = write_plan(args.out, passages, voices, args.tune_share, alts)
         print(json.dumps(stats, indent=1))
         return 0
     if args.step == "status":
