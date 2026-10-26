@@ -1,0 +1,7 @@
+// Copy to ios/Flutter/Signing.xcconfig (git-ignored) for a manually signed release
+// build, or let release.yml write it from secrets. Values are placeholders.
+CODE_SIGN_STYLE = Manual
+DEVELOPMENT_TEAM = ABCDE12345
+CODE_SIGN_IDENTITY = Apple Distribution
+CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Distribution
+PROVISIONING_PROFILE_SPECIFIER = UK Pronunciation Coach App Store
