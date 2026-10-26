@@ -1,0 +1,2 @@
+# R1-release icon generator (dev-side only, never shipped). Licence: Pillow MIT-CMU.
+pillow==13.0.0

@@ -52,7 +52,8 @@ class PluginReminderNotifications implements ReminderNotifications {
   Future<void> initialize() async {
     await _plugin.initialize(
       settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        // White silhouette (R1-release): Android draws small icons as an alpha mask.
+        android: AndroidInitializationSettings('@drawable/ic_notification'),
         // Ask only when the user switches the reminder on, not at start-up.
         iOS: DarwinInitializationSettings(
           requestAlertPermission: false,

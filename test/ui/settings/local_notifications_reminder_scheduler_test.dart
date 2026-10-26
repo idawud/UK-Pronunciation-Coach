@@ -267,7 +267,7 @@ void main() {
           'cancel',
         ]);
         final init = calls.first.arguments as Map;
-        expect(init['defaultIcon'], '@mipmap/ic_launcher');
+        expect(init['defaultIcon'], '@drawable/ic_notification');
 
         final args = (calls[2].arguments as Map).cast<String, Object?>();
         expect(args['id'], LocalNotificationsReminderScheduler.notificationId);
