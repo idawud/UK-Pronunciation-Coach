@@ -41,6 +41,12 @@ Plug-ins added for reminders and the Wi-Fi check (all permissive):
 `timezone` (BSD-2-Clause, IANA tz data public domain), `flutter_timezone`
 (Apache-2.0), `connectivity_plus` (BSD-3-Clause), and transitively `http`
 (BSD-3-Clause), `xml` and `petitparser` (MIT).
+"Send feedback" (R1) uses `url_launcher` and its platform packages (BSD-3-Clause)
+to open a `mailto:` draft in the user's mail app; it makes no network call.
+
+The Licences page (`lib/ui/settings/licence_data.dart`) lists every row of the table
+above; the full texts of the Noto Sans OFL and Britfone's MIT licence are also added
+to Flutter's "Open-source packages" page (`lib/ui/settings/bundled_licences.dart`).
 
 ## Dev-side only (never shipped)
 
@@ -55,6 +61,8 @@ Plug-ins added for reminders and the Wi-Fi check (all permissive):
 | Britfone 3.0.1 (eval copy) | MIT | `tools/eval/lexicon.py`: pinned commit `1062be1`, downloaded, not committed (I2) |
 | Kokoro-82M v1.0 (hexgrad; ONNX export by onnx-community) | Apache-2.0 | `tools/eval/synth/`: 8 British voices read the synthetic eval set; three `bm_george` reads are the e2e test clips in `test/e2e/fixtures/` (I1). Never shipped (I2; pins in `tools/eval/SOURCES.md`) |
 | Piper en_GB-cori-medium / -high | MIT; public-domain LibriVox data | `tools/eval/synth/`: same use (I2) |
+| Pillow | MIT-CMU (HPND) | `tools/release/icons.py`: renders the app icon, splash and store icons (R1) |
+| fastlane (optional, CI only) | MIT | `release.yml`: upload to Play internal testing / TestFlight when switched on (R1) |
 | torch, transformers, onnx, onnxruntime, safetensors, huggingface_hub, soundfile, pyarrow | BSD-3-Clause / Apache-2.0 / Apache-2.0 / MIT / Apache-2.0 / Apache-2.0 / BSD-3-Clause / Apache-2.0 | `tools/models/` export, quantisation, training (A4) |
 
 ## Piper en_GB voices reviewed (C4, 2026-10-19)

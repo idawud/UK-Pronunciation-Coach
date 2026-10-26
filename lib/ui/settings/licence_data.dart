@@ -75,6 +75,9 @@ const List<LicenceEntry> shippedLicences = [
     name: 'Full phoneme model (optional download)',
     licence: 'Apache-2.0',
     source: 'facebook/wav2vec2-lv-60-espeak-cv-ft, converted to ONNX',
+    note:
+        'Downloaded once over Wi-Fi, only if you choose to, from '
+        'github.com/idawud/UK-Pronunciation-Coach-models.',
   ),
   LicenceEntry(
     kind: LicenceKind.model,
@@ -87,7 +90,10 @@ const List<LicenceEntry> shippedLicences = [
     kind: LicenceKind.dictionary,
     name: 'Britfone British English pronunciation dictionary',
     licence: 'MIT',
-    source: 'Britfone',
+    source: 'Britfone 3.0.1, github.com/JoseLlarena/Britfone',
+    note:
+        'Copyright (c) 2017 Jose Llarena. Also the source of the passage, '
+        'minimal-pair and alternative pronunciations.',
   ),
   LicenceEntry(
     kind: LicenceKind.voice,
@@ -97,15 +103,17 @@ const List<LicenceEntry> shippedLicences = [
   ),
   LicenceEntry(
     kind: LicenceKind.content,
-    name: 'Passages for reading practice',
+    name: 'Passages and minimal pairs for reading practice',
     licence: 'Original or public domain',
-    source: 'Written or selected for this app',
+    source: 'Written for this app',
+    note: 'Three passages quote traditional public-domain tongue-twisters.',
   ),
   LicenceEntry(
     kind: LicenceKind.engine,
     name: 'ONNX Runtime',
     licence: 'MIT',
-    source: 'Microsoft',
+    source: 'Microsoft, github.com/microsoft/onnxruntime',
+    note: 'Runs the speech models on your phone.',
   ),
   LicenceEntry(
     kind: LicenceKind.engine,
@@ -118,15 +126,23 @@ const List<LicenceEntry> shippedLicences = [
   ),
   LicenceEntry(
     kind: LicenceKind.font,
+    name: 'Noto Sans (text and IPA symbols)',
+    licence: 'SIL Open Font License 1.1',
+    source: 'Noto Project (Google Fonts), bundled with the app',
+    note: 'Full licence text under Open-source packages.',
+  ),
+  LicenceEntry(
+    kind: LicenceKind.font,
     name: 'Material Icons',
     licence: 'Apache-2.0',
     source: 'Google, bundled by Flutter',
   ),
   LicenceEntry(
     kind: LicenceKind.font,
-    name: 'Text fonts',
+    name: 'Fallback text fonts',
     licence: 'Provided by your device',
     source:
-        'System fonts (Roboto on Android, San Francisco on iOS); not bundled',
+        'System fonts (Roboto on Android, San Francisco on iOS) for '
+        'characters Noto Sans lacks; not bundled',
   ),
 ];

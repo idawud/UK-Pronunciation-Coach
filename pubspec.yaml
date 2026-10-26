@@ -61,6 +61,8 @@ flutter:
   assets:
     - assets/content/
     - assets/models/
+    # Noto Sans licence text, shown on the Licences page (R1-release).
+    - assets/fonts/NotoSans-OFL.txt
   # IPA-capable font (SIL OFL 1.1, assets/fonts/NotoSans-OFL.txt), added by U1-home.
   fonts:
     - family: NotoSansIPA
