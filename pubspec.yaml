@@ -36,6 +36,7 @@ dependencies:
   permission_handler: ^13.0.2
   record: ^7.1.2
   timezone: ^0.11.2
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   alchemist: ^0.14.1

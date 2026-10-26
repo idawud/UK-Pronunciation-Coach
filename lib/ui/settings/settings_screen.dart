@@ -6,6 +6,7 @@ import '../../core/contracts/navigation.dart';
 import '../../core/models/models.dart';
 import '../../core/providers.dart';
 import 'backup_files.dart';
+import 'feedback.dart';
 import 'licences_screen.dart';
 import 'model_tier_section.dart';
 import 'reminder_scheduler.dart';
@@ -21,7 +22,7 @@ const int defaultReminderMinutes = 19 * 60;
 const double minTextScale = 0.8, maxTextScale = 1.6;
 
 /// Settings: practice (goal, reminder, text size), privacy (keep recordings), scoring
-/// model, British voice, your data (export, import, delete) and licences.
+/// model, British voice, your data (export, import, delete), feedback and licences.
 class SettingsScreen extends ConsumerWidget {
   /// Creates the screen.
   const SettingsScreen({super.key});
@@ -175,15 +176,44 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
   }
 
   Future<void> _export() => _run(() async {
+    final name = await _saveProgress();
+    if (name != null) _say('Progress saved as $name.');
+  });
+
+  /// Lets the user save the progress file; its name, or null when cancelled or failed.
+  Future<String?> _saveProgress() async {
     try {
       final json = await ref.read(progressRepositoryProvider).exportJson();
       final name = backupFileName(ref.read(clockProvider)());
       final saved = await ref.read(backupFilesProvider).save(name, json);
-      if (saved) _say('Progress saved as $name.');
+      return saved ? name : null;
     } on Exception {
       _say("Your progress couldn't be saved. Please try again.");
+      return null;
     }
-  });
+  }
+
+  Future<void> _sendFeedback(String to) async {
+    final choice = await showFeedbackDialog(context);
+    if (choice == null) return;
+    await _run(() async {
+      String? fileName;
+      if (choice == FeedbackChoice.withProgress) {
+        fileName = await _saveProgress();
+        if (fileName == null) return;
+      }
+      final uri = feedbackMailto(to: to, attachedFileName: fileName);
+      var opened = false;
+      try {
+        opened = await ref.read(emailLauncherProvider)(uri);
+      } on Exception {
+        opened = false;
+      }
+      if (!opened) {
+        _say('No email app was found. Please write to $to.');
+      }
+    });
+  }
 
   Future<void> _import() async {
     final ok = await _confirm(
@@ -385,6 +415,7 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
               onTap: _deleteAll,
             ),
             const _Header('About'),
+            _FeedbackTile(enabled: !_busy, onSend: _sendFeedback),
             ListTile(
               leading: const Icon(Icons.gavel_outlined),
               title: const Text('Licences'),
@@ -397,6 +428,29 @@ class _SettingsBodyState extends ConsumerState<_SettingsBody> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _FeedbackTile extends ConsumerWidget {
+  const _FeedbackTile({required this.enabled, required this.onSend});
+
+  final bool enabled;
+  final void Function(String to) onSend;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final to = ref.watch(feedbackEmailProvider);
+    return ListTile(
+      leading: const Icon(Icons.feedback_outlined),
+      title: const Text('Send feedback'),
+      subtitle: Text(
+        to == null
+            ? 'Not available in this build.'
+            : 'Write to us from your mail app. Nothing is sent automatically.',
+      ),
+      enabled: enabled && to != null,
+      onTap: to == null ? null : () => onSend(to),
     );
   }
 }
