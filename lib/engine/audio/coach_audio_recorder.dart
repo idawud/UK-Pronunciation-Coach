@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/contracts/audio_recorder.dart';
 import '../../core/contracts/clock.dart';
 import '../../core/contracts/errors.dart';
+import '../../core/contracts/live_recognition.dart';
 import '../../core/models/models.dart';
 import 'mic.dart';
 import 'signal.dart';
@@ -49,7 +50,7 @@ Future<Directory> defaultRecordingsDirectory() async {
 /// WAV file, computes the level stream, runs the VAD live (for `silenceDetected`
 /// and, for free, `speechSegments` of the clip just recorded) and checks quality
 /// on [stop].
-class CoachAudioRecorder implements AudioRecorder {
+class CoachAudioRecorder implements AudioRecorder, LiveAudioSource {
   /// Creates the recorder. [loadVad] starts at once so the model is warm before the
   /// first [start].
   CoachAudioRecorder({
@@ -97,6 +98,7 @@ class CoachAudioRecorder implements AudioRecorder {
 
   final _level = StreamController<double>.broadcast();
   final _silence = StreamController<void>.broadcast();
+  final _live = StreamController<LiveAudioBlock>.broadcast(sync: true);
 
   /// VAD probabilities of recent clips, by path, so [speechSegments] does not
   /// re-run the model on the clip it just heard.
@@ -197,7 +199,17 @@ class CoachAudioRecorder implements AudioRecorder {
     for (final v in take.meter.add(samples)) {
       _level.add(v);
     }
-    for (final p in take.vad.add(samples)) {
+    final probabilities = take.vad.add(samples);
+    if (_live.hasListener) {
+      _live.add(
+        LiveAudioBlock(
+          samples,
+          speechProbabilities: probabilities,
+          speechChunkSamples: _liveChunk,
+        ),
+      );
+    }
+    for (final p in probabilities) {
       if (take.silence.add(p)) _silence.add(null);
     }
   }
@@ -264,6 +276,11 @@ class CoachAudioRecorder implements AudioRecorder {
   @override
   Stream<void> get silenceDetected => _silence.stream;
 
+  /// Every block is delivered synchronously from the microphone callback, so all
+  /// of a recording's audio has been delivered when [stop] returns.
+  @override
+  Stream<LiveAudioBlock> get liveAudio => _live.stream;
+
   void _remember(String path, List<double> probabilities) {
     _probabilityCache.remove(path);
     _probabilityCache[path] = probabilities;
@@ -306,6 +323,7 @@ class CoachAudioRecorder implements AudioRecorder {
     await _mic.dispose();
     await _level.close();
     await _silence.close();
+    await _live.close();
   }
 
   void _checkNotDisposed() {

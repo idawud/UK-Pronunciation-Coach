@@ -7,14 +7,17 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/contracts/errors.dart';
+import '../../core/contracts/live_recognition.dart';
 import '../../core/contracts/phoneme_recognizer.dart';
 import '../../core/models/audio_clip.dart';
 import '../../core/models/enums.dart';
 import '../../core/models/model_download_progress.dart';
 import '../../core/models/phoneme_posteriors.dart';
 import 'audio_input.dart';
+import 'chunk_planner.dart';
 import 'ctc_session.dart';
 import 'inference_worker.dart';
+import 'live_recognition_session.dart';
 import 'model_downloader.dart';
 import 'model_files.dart';
 import 'model_manifest.dart';
@@ -37,7 +40,8 @@ const int fallbackFullModelBytes = 317717489;
 ///
 /// Files under [root]: `light/` (bundled model copied out of the app),
 /// `full/` (downloaded model), `tier.json` (cached [recommendedTier]).
-class OnnxPhonemeRecognizer implements PhonemeRecognizer {
+class OnnxPhonemeRecognizer
+    implements PhonemeRecognizer, IncrementalPhonemeRecognizer {
   /// Creates the recognizer. Prefer [create] in the app; tests inject everything.
   OnnxPhonemeRecognizer({
     required this.root,
@@ -222,6 +226,48 @@ class OnnxPhonemeRecognizer implements PhonemeRecognizer {
         blankIndex: out.blankIndex,
         frameMs: modelFrameMs,
         tier: tier,
+      );
+    });
+  }
+
+  /// How live recognition cuts recordings ([startLiveRecognition]).
+  LiveChunking liveChunking = const LiveChunking();
+
+  /// The session [startLiveRecognition] returned last (for benchmarks).
+  LiveRecognitionSession? get lastLiveRecognition => _lastLive;
+  LiveRecognitionSession? _lastLive;
+
+  @override
+  LiveRecognitionSession startLiveRecognition() {
+    _checkAlive();
+    return _lastLive = LiveRecognitionSession(
+      recognise: _recogniseSamples,
+      wholeClip: recognise,
+      loadedTier: () => _loaded,
+      settings: liveChunking,
+      frameMs: modelFrameMs,
+    );
+  }
+
+  /// Runs one piece of a live recording, queued like [recognise] (so behind any
+  /// pending load, with the tier of the model that ran).
+  Future<ChunkPosteriors?> _recogniseSamples(
+    Float32List samples, {
+    required bool Function() skip,
+  }) {
+    if (_disposed) return Future.error(StateError('Recognizer disposed'));
+    return _serial(() async {
+      if (skip()) return null;
+      final tier = _loaded;
+      final worker = _worker;
+      if (tier == null || worker == null) throw StateError('No model loaded');
+      final out = await worker.recogniseSamples(samples);
+      return ChunkPosteriors(
+        tier: tier,
+        logProbs: out.logProbs,
+        frames: out.frames,
+        vocab: out.vocab,
+        blankIndex: out.blankIndex,
       );
     });
   }

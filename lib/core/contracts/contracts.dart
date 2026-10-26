@@ -6,6 +6,7 @@ export 'audio_recorder.dart';
 export 'clock.dart';
 export 'content_repository.dart';
 export 'errors.dart';
+export 'live_recognition.dart';
 export 'navigation.dart';
 export 'phoneme_recognizer.dart';
 export 'practice_engine.dart';
