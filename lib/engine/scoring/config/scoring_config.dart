@@ -5,6 +5,8 @@ library;
 
 import 'dart:math' as math;
 
+import '../../../core/models/enums.dart';
+
 /// A piecewise-linear curve through [knots] (x ascending), clamped at both ends.
 class PiecewiseLinear {
   /// Creates the curve. [knots] must be non-empty with strictly ascending x.
@@ -150,6 +152,21 @@ class ScoringConfig {
             },
     );
   }
+
+  /// The config for the light-tier model: the calibration it had before the
+  /// accuracy pass ([i2Calibration], no per-phoneme offsets, no syllabic forms).
+  /// The accuracy-pass defaults were fitted on the full tier and made the light
+  /// model flag many correct words (VCTK native false red 6% -> 16%), so the light
+  /// tier keeps this until it gets its own fit (docs/eval-report.md).
+  static const ScoringConfig light = ScoringConfig(
+    calibration: i2Calibration,
+    phonemeGopOffset: {},
+    syllabicConsonants: false,
+  );
+
+  /// The config for [tier]: [light] or the defaults.
+  static ScoringConfig forTier(ModelTier tier) =>
+      tier == ModelTier.light ? light : const ScoringConfig();
 
   /// GOP margin (expected minus best competitor, mean log-posterior over the
   /// phoneme's frames) -> 0-100, applied after [defaultPhonemeGopOffset]. I2-eval

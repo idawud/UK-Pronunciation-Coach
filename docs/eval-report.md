@@ -103,21 +103,37 @@ Recall by error type (held-out, red):
 Caveat: two Piper voices (`cori_high`, `cori_medium`) now have 5.8% and 6.0% clean-read false
 red (4.4% and 3.8% before). The held-out total passes, but a single voice does not.
 
-Light tier (report only; the light model is the bundled default, and these configs
-were tuned on the full tier). Samples: 376 native clips (half) and 450 synthetic clean
-reads:
+Light tier. The accuracy-pass defaults were fitted on the full tier and, applied to the
+light model, regressed it badly (samples: 376 native clips and 450 synthetic clean reads):
 
-| Light tier | Before | After |
+| Light tier, if it used the new defaults | Before | With new defaults |
 | --- | --- | --- |
-| VCTK native false red | 6.0% | **16.1%** (held-out 6.5% to 16.4%) |
-| Synthetic clean-read false red | 18.8% | **32.4%** |
+| VCTK native false red | 6.0% | 16.1% (held-out 6.5% to 16.4%) |
+| Synthetic clean-read false red | 18.8% | 32.4% |
 | Substitution probes red / swap probes red | 66.4% / 99.2% | 80.8% / 99.2% |
 
-The new defaults are **not suitable for the light tier**: the light model's posteriors have
-a different scale, and its false red was already above 5% before this change. The light
-tier needs its own curve and offsets (`ScoringConfig` already loads them from JSON), fitted
-with `gop_search.py` on a light-tier feature run. This was out of scope here and is the most
-urgent follow-up if the light model is the default.
+**Fix: the scorer picks its config by model tier.** `ScoringConfig.forTier(tier)` /
+`GopPronunciationScorer.configFor(posteriors.tier)`: the full tier uses the new defaults;
+the light tier uses `ScoringConfig.light`, which is the calibration it had before this
+branch (`i2Calibration`, no per-phoneme offsets, no syllabic forms; the cap and
+intrusive-r values were not changed by the pass). **The light tier keeps the old
+calibration until it gets its own fit.** An explicit `GopPronunciationScorer(config: c)`
+still applies `c` to both tiers. Light tier after the fix (all 750 native clips, light
+model, real engine): VCTK false red 5.9% (held-out 6.6%), probes 99.6% / 68.0%, identical
+to before the pass. Full tier unchanged by the fix: 2.5% (held-out 3.5%), probes
+99.6% / 86.8%. Synthetic check (sample: every
+third held-out passage, 3,240 clean and 3,240 error reads): light clean-read false red 21.0%
+(the earlier 18.8% was a different, 450-clip sample; the old code path is unchanged), kappa
+0.206; full clean-read false red 3.9%, kappa 0.314, recall 29.0%, matching the full
+held-out numbers above.
+
+Harness note: `run_eval_test.dart` loads every model in the "light" slot, so earlier runs
+tagged all posteriors `light`. It now tags them from `EVAL_TIER` (default: `light` when the
+model path contains "light", else `full`), so the per-tier config is the one measured.
+
+Next steps for the light tier: a light-tier `gop_search.py` fit (run `EVAL_FEATURES=1` on
+the light model, then search a curve and offsets under the false-red cap), and the British
+fine-tune of the phoneme model for real recall gains.
 
 Scoring 200 words in Dart takes 38 ms (56 ms with alternatives); the < 100 ms gate holds.
 
@@ -150,7 +166,8 @@ Not started here.
 - **Error catching improved but is still weak**: kappa 0.32, 29.5% of injected errors red
   (was 0.27 and 23%). That is below the 0.4 kappa I suggested as a release gate.
 - **Verdict: NO-GO on accuracy for release, GO to continue development.** Release needs
-  the model fine-tune above (full tier), plus a light-tier calibration. Until then the app
+  the model fine-tune above (full tier), plus a light-tier calibration (the light tier
+  keeps the old calibration until then). Until then the app
   should keep green/amber/red as a guide and not claim to catch most errors.
 - New regression gates (held-out voices, `run_harness.sh` and `eval.yml`): kappa >= 0.30,
   recall of injected errors >= 27%, clean-read false red <= 5%, alongside the 80%

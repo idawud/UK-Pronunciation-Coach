@@ -80,11 +80,25 @@ class ScoringAnalysis {
 ///    accuracy = mean word score; fluency from rate, pauses and missed / extra /
 ///    repeated words ([computeFluency]); overall = 0.7 accuracy + 0.3 fluency.
 class GopPronunciationScorer implements PronunciationScorer {
-  /// Creates a scorer with [config] (defaults: A3's initial calibration).
-  const GopPronunciationScorer({this.config = const ScoringConfig()});
+  /// Creates a scorer. [config] scores full-tier posteriors (default
+  /// [ScoringConfig]). [lightConfig] scores light-tier posteriors; when omitted it
+  /// is [ScoringConfig.light] if [config] is also omitted, otherwise [config] (an
+  /// explicit config applies to every tier).
+  const GopPronunciationScorer({
+    ScoringConfig? config,
+    ScoringConfig? lightConfig,
+  }) : config = config ?? const ScoringConfig(),
+       lightConfig = lightConfig ?? (config ?? ScoringConfig.light);
 
-  /// Calibration and thresholds.
+  /// Calibration and thresholds for the full tier.
   final ScoringConfig config;
+
+  /// Calibration and thresholds for the light tier.
+  final ScoringConfig lightConfig;
+
+  /// The config used for posteriors of [tier].
+  ScoringConfig configFor(ModelTier tier) =>
+      tier == ModelTier.light ? lightConfig : config;
 
   static final RegExp _punctuation = RegExp(r'[.,;:!?]');
 
@@ -114,7 +128,10 @@ class GopPronunciationScorer implements PronunciationScorer {
 
   @override
   WordResult scoreWord(WordSpec word, PhonemePosteriors posteriors) {
-    final r = _bestVariant(_withSyllabicForms(word), posteriors).result;
+    final r = _bestVariant(
+      _withSyllabicForms(word, posteriors.tier),
+      posteriors,
+    ).result;
     return r.copyWith(index: word.index, text: word.text);
   }
 
@@ -131,9 +148,11 @@ class GopPronunciationScorer implements PronunciationScorer {
     PhonemePosteriors posteriors,
     List<Segment> speech,
   ) {
-    if (config.syllabicConsonants) {
+    if (configFor(posteriors.tier).syllabicConsonants) {
       passage = passage.copyWith(
-        words: [for (final w in passage.words) _withSyllabicForms(w)],
+        words: [
+          for (final w in passage.words) _withSyllabicForms(w, posteriors.tier),
+        ],
       );
     }
     final first = _Analysis(this, passage, posteriors, speech).run();
@@ -178,8 +197,8 @@ class GopPronunciationScorer implements PronunciationScorer {
   /// token (`əl`), which two separate units cannot both claim, so one of them looked
   /// dropped (I2 contract request 1). The alternative search keeps the form that
   /// matches best, so a reader who says both sounds still matches the main form.
-  WordSpec _withSyllabicForms(WordSpec word) {
-    if (!config.syllabicConsonants || !word.scorable) return word;
+  WordSpec _withSyllabicForms(WordSpec word, ModelTier tier) {
+    if (!configFor(tier).syllabicConsonants || !word.scorable) return word;
     final added = <List<PhonemeSpec>>[];
     for (final form in [word.phonemes, ...word.alternatives]) {
       final s = syllabicForm(form);
@@ -308,7 +327,7 @@ class _PhonemeStats {
 
 class _Analysis {
   _Analysis(this.scorer, this.passage, this.post, this.speech)
-    : config = scorer.config,
+    : config = scorer.configFor(post.tier),
       vocab = ModelVocab(
         List<String>.of(post.vocab, growable: false),
         post.blankIndex,

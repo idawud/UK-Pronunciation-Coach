@@ -9,6 +9,7 @@
 //   EVAL_DATA=tools/eval/data/evalset \
 //   EVAL_MODEL_DIR=/path/to/full        # model.onnx + vocab.json
 //   EVAL_OUT=tools/eval/work/run1 \
+//   [EVAL_TIER=light|full (default: light when EVAL_MODEL_DIR contains "light")]
 //   [EVAL_CACHE=tools/eval/work/posteriors] [EVAL_CONFIGS=name=cfg.json,...] \
 //   flutter test tools/eval/dart/run_eval_test.dart
 //
@@ -91,10 +92,25 @@ void main() {
               Directory(cacheDir),
               '${File(model).lengthSync()}:${File(model).uri.pathSegments.last}',
             ).wrap(recognise);
+      // The recognizer here always loads the model as the "light" slot; the tier the
+      // scorer sees (and so its per-tier config) is the model's real one.
+      final tier = ModelTier.values.byName(
+        _env['EVAL_TIER'] ?? (modelDir.contains('light') ? 'light' : 'full'),
+      );
+      stdout.writeln('scoring as the ${tier.name} tier');
+      Future<TimedPosteriors> tagged(String wav) async {
+        final r = await source(wav);
+        return TimedPosteriors(
+          r.posteriors.copyWith(tier: tier),
+          modelMs: r.modelMs,
+          totalMs: r.totalMs,
+        );
+      }
+
       final out = await runEval(
         items: items,
         passages: passages,
-        source: source,
+        source: tagged,
         configs: parseConfigs(_env['EVAL_CONFIGS'] ?? ''),
         features: _env['EVAL_FEATURES'] == '1',
         log: (m) => stdout.writeln(m),

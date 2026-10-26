@@ -360,7 +360,10 @@ Future<EvalOutput> runEval({
   final out = EvalOutput();
   final scorers = {
     for (final e in configs.entries)
-      e.key: GopPronunciationScorer(config: e.value),
+      // The built-in config means "the shipped defaults": per-tier selection.
+      e.key: identical(e.value, const ScoringConfig())
+          ? const GopPronunciationScorer()
+          : GopPronunciationScorer(config: e.value),
   };
   for (final name in configs.keys) {
     out.words[name] = [csvLine(wordCsvHeader)];
