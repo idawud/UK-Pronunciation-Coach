@@ -18,11 +18,17 @@ const double recognitionRealTimeFactor = 0.5;
 
 /// Recognise the recording while the user reads, when the recorder and recognizer
 /// support it (`LiveAudioSource` + `IncrementalPhonemeRecognizer`), so that on stop
-/// only the last stretch of speech is left. `--dart-define=LIVE_SCORING=false`
-/// turns it off (for measuring the difference on a phone).
+/// only the last stretch of speech is left. Turn it on with
+/// `--dart-define=LIVE_SCORING=true`.
+///
+/// Off by default: it cuts stop-to-result from ~7 s to under 1 s on a desktop, but
+/// joined posteriors do not score identically to whole-clip ones (word-status
+/// agreement 90.6% full tier, 66.2% light tier) and it scores more leniently. The
+/// default flips once the scoring config is recalibrated on live posteriors; see
+/// docs/handoff/perf-speed.md.
 const bool liveScoringDefault = bool.fromEnvironment(
   'LIVE_SCORING',
-  defaultValue: true,
+  defaultValue: false,
 );
 
 /// Recording stops by itself after this long (a level-6 passage takes ~90 s).
