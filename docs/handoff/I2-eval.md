@@ -1,5 +1,32 @@
 # Handoff: I2-eval
 
+## Update 2026-10-26: accuracy pass (branch feat/accuracy-detection)
+
+Full write-up: docs/eval-report.md, "Accuracy pass". Short version:
+
+- **Scorer**: syllabic `l̩`/`n̩` alternatives (`syllabicConsonants`), per-phoneme GOP
+  offsets (`phonemeGopOffset`, `ScoringConfig.phonemeScore(gop, phoneme)`), and a
+  recalibrated `defaultCalibration` with `defaultPhonemeGopOffset`. The previous curve is
+  `ScoringConfig.i2Calibration`.
+- **Held-out, full tier**: kappa 0.271 to 0.319, recall 23.1% to 29.5%, clean-read false
+  red 2.7% to 3.8%, VCTK false red 2.2% to 3.5%. Agreement unchanged at 87.9%.
+- **Not suitable for the light tier**: its false red rises from 6.0% to 16.1% on VCTK. It
+  needs its own curve and offsets (run `gop_search.py` on a light feature run). Most urgent
+  follow-up if the light model ships as the default.
+- **Tools**: `tools/eval/gop_search.py` re-scores `EVAL_FEATURES=1` harness dumps offline
+  (a 500-variant grid takes about 3 minutes). `tools/eval/alternatives.py` plus `build_set`/
+  `synth.build` write alternative pronunciations into the eval passages.
+- **Gates** (`run_harness.sh`, `eval.yml`, `synth.report --min-kappa --min-recall
+  --max-clean-red`): held-out kappa >= 0.30, recall >= 27%, clean-read false red <= 5%
+  (override with `EVAL_MIN_KAPPA`, `EVAL_MIN_RECALL`, `EVAL_MAX_CLEAN_RED`). Each skips when
+  the model or audio is missing.
+- **Limit**: threshold and offset tuning caps out near kappa 0.30 to 0.33 inside the
+  false-red gates. Reaching probe-level recall (about 79%) needs a phoneme model
+  fine-tuned on British speech (about 1 to 2 weeks, 20 to 60 GPU-hours); not started.
+- **Verdict**: NO-GO on accuracy for release, GO to continue.
+- A confusion-aware competitor (a 4-nat handicap for sounds outside the learner confusion
+  set) gives held-out kappa 0.347 but needs a table in Dart; not applied.
+
 ## Update 2026-10-20: synthetic British-voice labels (branch feat/i2-synth-eval)
 
 No teacher will be paid, so the default accuracy gate now uses synthetic labels.

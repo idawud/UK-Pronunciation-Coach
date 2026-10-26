@@ -13,7 +13,7 @@ README).
 | Does the engine leave native Southern British speech alone? | **Yes, after calibration.** 3.6% of native words are red (target < 5%). On the 2 held-out speakers it is 3.7%. Before calibration it was 28.6%. |
 | Does it catch known errors? | **Mostly (proxy).** 99.6% of word swaps and 79% of single-phoneme substitutions come out red; 91% of substitutions are not green. |
 | Does it agree with a teacher on learner speech (the ≥ 80% gate)? | **Unknown.** No teacher labels exist yet. The template, instructions and script are ready. |
-| Does it agree with synthetic labels (the proxy gate, 2026-10-20)? | **The 80% number passes, but it means little.** 87.4% word agreement on held-out TTS voices, the same as marking every word right (87.4%). Kappa is 0.26 and only 24% of injected errors come out red. See "Synthetic British-voice evaluation" below. |
+| Does it agree with synthetic labels (the proxy gate, 2026-10-20)? | **The 80% number passes, but it means little.** (Updated 2026-10-26: kappa 0.32 and 29.5% of errors red after the accuracy pass; still NO-GO, see "Accuracy pass".) 87.4% word agreement on held-out TTS voices, the same as marking every word right (87.4%). Kappa is 0.26 and only 24% of injected errors come out red. See "Synthetic British-voice evaluation" below. |
 | Is it fast enough? | **Not with the full tier on this CPU.** The median real-time factor is 0.38, so a 25 s passage takes roughly 8–10 s on 4 x86 threads. Real phones and the light tier still need measuring. |
 
 **Recommendation: conditional GO for the engine spike.** The scoring pipeline works on real
@@ -34,6 +34,127 @@ flags most controlled errors. The **release** go/no-go still depends on 3 things
 Starting Wave 1 screens is reasonable, provided the teacher labels are collected in
 parallel. If agreement falls short of 80%, the likely fixes are calibration and lexicon
 work (`tools/eval/calibrate.py`), not changes to the screens.
+
+## Accuracy pass (2026-10-26): modest gain, still NO-GO on accuracy
+
+Goal: catch more injected errors without pushing false red over the 5% gates. Numbers
+below are on **held-out** data only (synthetic voices bm_george, bf_isabella, cori_*; VCTK
+speakers not used for tuning), full tier, same posteriors before and after.
+
+### What was tried
+
+1. **Syllabic `l̩` / `n̩` alternatives** (scorer): `ə l` / `ə n` ending a syllable
+   ("people", "button") also match a syllabic form, because the model often writes
+   the pair as one token. Kept (config `syllabicConsonants`, default on). It removes
+   a source of false red on correct reads rather than adding recall.
+2. **Alternative pronunciations in the harness and the synthetic set**, so the eval scores
+   words the way the app does.
+3. **Per-phoneme GOP offsets** (`phonemeGopOffset`): each sound's 10th-percentile GOP
+   on correct tuning speech (native VCTK plus clean synthetic reads), relative to all
+   sounds, shrunk for rare sounds. Kept: one curve fits every sound better.
+4. **Offline GOP search** (`tools/eval/gop_search.py`, re-scores harness feature dumps
+   without re-running the model):
+   - A first search of 8,064 variants (mean/peak GOP, confusion-aware competitors,
+     offsets, curve shift and scale, cap, dropped and intrusive-r scores) with a loose cap
+     did **not generalise**. Tuned on the tuning split it looked good; on held-out it gave
+     kappa 0.27 to 0.37 and recall 23% to 39%, but clean-read false red rose from 2.7% to
+     5.6% and VCTK false red from 2.2% to 4.9%. Rejected (fails the < 5% gates).
+   - Re-run with a **small grid and strict tuning caps** (native and clean-read false red
+     at most 2% on the tuning split): 504 variants without the confusion-aware
+     competitor, 288 with it.
+5. **Confusion-aware competitor** (competitors outside a sound's learner-confusion set
+   handicapped by 4 nats). Best of the 288: held-out kappa 0.347, recall 32.5%, clean-read
+   false red 3.9%, VCTK 3.7%. Not applied: it needs a confusion table in the Dart scorer
+   for +0.03 kappa. Left as an option.
+
+### What was kept (`ScoringConfig` defaults)
+
+Mean-GOP margin, the previous curve shifted about 0.6 nats stricter and stretched
+(`defaultCalibration`: -5.8 to 5.4 nats), the per-phoneme offsets
+(`defaultPhonemeGopOffset`), syllabic alternatives. Cap above the worst sound (40),
+dropped score (60), intrusive-r score (80) and the thresholds are unchanged. The previous
+curve stays as `ScoringConfig.i2Calibration` (and `a3Calibration`).
+
+### Before and after (held-out, full tier)
+
+| Metric | Before | After |
+| --- | --- | --- |
+| Word agreement (synthetic) | 87.9% | 87.9% (always-right floor 87.4%) |
+| Cohen's kappa | 0.271 | **0.319** |
+| Recall of injected errors (red) | 23.1% | **29.5%** |
+| Clean-read false red (gate < 5%) | 2.7% | 3.8% |
+| False red on all right words | 2.7% | 3.7% |
+| VCTK native false red, held-out speakers (gate < 5%) | 2.2% | 3.5% |
+| VCTK native false red, all 2,135 words | 1.7% | 2.5% |
+| VCTK substitution probes red / swap probes red | 78.8% / 99.6% | 86.8% / 99.6% |
+
+Recall by error type (held-out, red):
+
+| Error class | Before | After |
+| --- | --- | --- |
+| consonant substitutions | 36.1% | 45.7% |
+| vowel substitutions | 20.1% | 25.8% |
+| dropped final consonant | 21.7% | 27.4% |
+| stress | 10.4% | 13.9% |
+| added r | 3.3% | 6.0% |
+| added h | 2.6% | 5.2% |
+| dropped h | 11.6% | 7.0% (n = 43) |
+
+Caveat: two Piper voices (`cori_high`, `cori_medium`) now have 5.8% and 6.0% clean-read false
+red (4.4% and 3.8% before). The held-out total passes, but a single voice does not.
+
+Light tier (report only; the light model is the bundled default, and these configs
+were tuned on the full tier). Samples: 376 native clips (half) and 450 synthetic clean
+reads:
+
+| Light tier | Before | After |
+| --- | --- | --- |
+| VCTK native false red | 6.0% | **16.1%** (held-out 6.5% to 16.4%) |
+| Synthetic clean-read false red | 18.8% | **32.4%** |
+| Substitution probes red / swap probes red | 66.4% / 99.2% | 80.8% / 99.2% |
+
+The new defaults are **not suitable for the light tier**: the light model's posteriors have
+a different scale, and its false red was already above 5% before this change. The light
+tier needs its own curve and offsets (`ScoringConfig` already loads them from JSON), fitted
+with `gop_search.py` on a light-tier feature run. This was out of scope here and is the most
+urgent follow-up if the light model is the default.
+
+Scoring 200 words in Dart takes 38 ms (56 ms with alternatives); the < 100 ms gate holds.
+
+### Limits of threshold tuning
+
+Within the < 5% false-red gates, tuning the curve, offsets and word rules alone caps
+out at **kappa about 0.30 to 0.33** on this set (best seen with a confusion table: 0.35).
+Every setting that went further did so by raising false red past the gate, and the
+8,064-variant search shows the held-out gain does not survive. The VCTK controlled-error
+probe reaches about 79% to 87% recall because it swaps whole sounds in a native reading;
+the synthetic set, with realistic TTS accents and noise, is at 30%. The gap is the
+model: it was trained on eSpeak en-us labels from mostly American speech, so for British
+speech its posteriors are noisy for exactly the sounds learners confuse (vowels, r, h).
+
+### Recommended next step: fine-tune the phoneme model on British speech
+
+Fine-tune wav2vec2 (CTC phoneme head) on British English read speech with RP-style phoneme
+labels (for example VCTK/UK corpora under permissive licences, plus synthetic British
+voices for the rare sounds), then re-export to ONNX for the full and light tiers. Rough
+estimate: 1 to 2 weeks of work (data prep and labels 3 to 4 days, training and
+iteration 3 to 5 days, export, quantisation and re-calibration 2 days), and 20 to
+60 GPU-hours (one 24 GB GPU, roughly 30 to 100 USD on rented hardware). The team has
+neither a paid teacher nor a GPU (memory notes), so this needs a rented GPU or Colab.
+Not started here.
+
+### Verdict after this pass
+
+- **Native speech is left alone**: 3.5% held-out VCTK false red and 3.8% clean-read false
+  red, both under 5% (full tier).
+- **Error catching improved but is still weak**: kappa 0.32, 29.5% of injected errors red
+  (was 0.27 and 23%). That is below the 0.4 kappa I suggested as a release gate.
+- **Verdict: NO-GO on accuracy for release, GO to continue development.** Release needs
+  the model fine-tune above (full tier), plus a light-tier calibration. Until then the app
+  should keep green/amber/red as a guide and not claim to catch most errors.
+- New regression gates (held-out voices, `run_harness.sh` and `eval.yml`): kappa >= 0.30,
+  recall of injected errors >= 27%, clean-read false red <= 5%, alongside the 80%
+  agreement gate. They sit just below what the shipped config measures.
 
 ## Synthetic British-voice evaluation (2026-10-20)
 
