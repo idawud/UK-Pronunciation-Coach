@@ -67,13 +67,17 @@ class InferenceCore {
 
   /// Reads the 16 kHz WAV at [wavPath], normalises it and runs the model.
   /// Throws [StateError] when no model is loaded.
-  RecognitionOutput recognise(String wavPath) {
+  RecognitionOutput recognise(String wavPath) =>
+      recogniseSamples(decodePcm16Wav(File(wavPath).readAsBytesSync()));
+
+  /// Normalises raw 16 kHz samples in [-1, 1] and runs the model.
+  /// Throws [StateError] when no model is loaded.
+  RecognitionOutput recogniseSamples(Float32List raw) {
     final session = _session;
     final vocab = _vocab;
     if (session == null || vocab == null) {
       throw StateError('No model loaded');
     }
-    final raw = decodePcm16Wav(File(wavPath).readAsBytesSync());
     final input = padToMinLength(normaliseWaveform(raw), minModelSamples);
     final watch = Stopwatch()..start();
     final logits = session.run(input);
@@ -110,8 +114,12 @@ class InferenceCore {
         case 'load':
           final (model, vocab) = arg! as (String, String);
           return (id, true, await load(model, vocab));
-        case 'recognise':
-          final out = recognise(arg! as String);
+        case 'recognise' || 'recogniseSamples':
+          final out = op == 'recognise'
+              ? recognise(arg! as String)
+              : recogniseSamples(
+                  (arg! as TransferableTypedData).materialize().asFloat32List(),
+                );
           return (
             id,
             true,
@@ -198,10 +206,20 @@ class InferenceWorker {
       await _call('load', (modelPath, vocabPath)) as int;
 
   /// See [InferenceCore.recognise]. The result's buffer is moved, not copied.
-  Future<RecognitionOutput> recognise(String wavPath) async {
+  Future<RecognitionOutput> recognise(String wavPath) =>
+      _recognition('recognise', wavPath);
+
+  /// See [InferenceCore.recogniseSamples]. [samples] are moved to the isolate.
+  Future<RecognitionOutput> recogniseSamples(Float32List samples) =>
+      _recognition(
+        'recogniseSamples',
+        TransferableTypedData.fromList([samples]),
+      );
+
+  Future<RecognitionOutput> _recognition(String op, Object arg) async {
     final (data, frames, vocab, blank, samples, micros) = await _call(
-      'recognise',
-      wavPath,
+      op,
+      arg,
     ) as (TransferableTypedData, int, List<String>, int, int, int);
     return RecognitionOutput(
       logProbs: data.materialize().asFloat32List(),
