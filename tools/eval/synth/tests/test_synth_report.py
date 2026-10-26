@@ -100,6 +100,10 @@ def test_main_gate(tmp_path, capsys):
     assert R.main(["--labels", str(lp), "--words", str(wp), "--gate", "nope"]) == 0
     args = ["--labels", str(lp), "--words", str(wp), "--threshold", "0.6"]
     assert R.main([*args, "--min-kappa", "0.9"]) == 1
+    assert R.main([*args, "--min-recall", "1.01"]) == 1
+    assert R.main([*args, "--min-recall", "0.0", "--max-clean-red", "0.0"]) in (0, 1)
+    assert R.main([*args, "--gate", "all", "--max-clean-red", "1.0"]) == 0
+    assert R.main([*args, "--max-clean-red", "-1"]) == 1
     assert "SKIPPED" in capsys.readouterr().out
 
 

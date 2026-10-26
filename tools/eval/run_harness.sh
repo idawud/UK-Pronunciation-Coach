@@ -12,7 +12,10 @@
 #    construction; see tools/eval/LABELLING.md): plan (text only), optional synthesis
 #    (EVAL_SYNTH_BUILD=1; hours on CPU, needs the voices from
 #    `python -m tools.eval.synth.build fetch`), harness, then agreement per split.
-#    Fails when agreement on EVAL_SYNTH_GATE voices (default heldout) < 80%.
+#    Fails when, on EVAL_SYNTH_GATE voices (default heldout), agreement < 80%, kappa <
+#    EVAL_MIN_KAPPA (0.30), recall of wrong words < EVAL_MIN_RECALL (0.27) or clean-read
+#    false red > EVAL_MAX_CLEAN_RED (0.05). The kappa and recall floors sit just below
+#    the shipped calibration's measured held-out numbers (0.319 / 29.5%, docs/eval-report.md).
 #    EVAL_SYNTH_PARTIAL=1 scores the fully rendered sentences of a partial build.
 # 4. Optional learner set (tools/eval/data/learners/<speaker>/<passage>.wav) with
 #    teacher labels (tools/eval/labels/labels.csv). Fails below 80%.
@@ -35,6 +38,9 @@ LABELS=${EVAL_LABELS:-tools/eval/labels/labels.csv}
 MAX_RED=${EVAL_MAX_RED:-0.05}
 CACHE=${EVAL_CACHE:-$OUT/posteriors}
 SYNTH_GATE=${EVAL_SYNTH_GATE:-heldout}
+MIN_KAPPA=${EVAL_MIN_KAPPA:-0.30}
+MIN_RECALL=${EVAL_MIN_RECALL:-0.27}
+MAX_CLEAN_RED=${EVAL_MAX_CLEAN_RED:-0.05}
 STATUS=0
 
 step() { printf '\n==> %s\n' "$*"; }
@@ -80,7 +86,8 @@ else
   run_harness "$SYN/manifest.complete.tsv" "$SYN" "$SYN/passages.json" "$OUT/synth"
   gate "$PY" -m tools.eval.synth.report --labels "$SYN/labels.complete.csv" \
     --words "$OUT/synth/words_default.csv" --json "$OUT/synth/summary.json" \
-    --gate "$SYNTH_GATE"
+    --gate "$SYNTH_GATE" --min-kappa "$MIN_KAPPA" --min-recall "$MIN_RECALL" \
+    --max-clean-red "$MAX_CLEAN_RED"
 fi
 
 step "learner set (optional): word agreement with teacher labels (>= 80%)"

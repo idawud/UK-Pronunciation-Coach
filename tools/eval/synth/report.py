@@ -152,6 +152,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--min-kappa", type=float, help="also require Cohen's kappa >= this on the gate split"
     )
+    ap.add_argument(
+        "--min-recall",
+        type=float,
+        help="also require this share of wrong words to be red on the gate split",
+    )
+    ap.add_argument(
+        "--max-clean-red",
+        type=float,
+        help="also require clean-read false red (gate split) <= this",
+    )
     args = ap.parse_args(argv)
     for p in (args.labels, args.words):
         if not p.exists():
@@ -170,6 +180,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.min_kappa is not None and gate["kappa"] < args.min_kappa:
         print(f"kappa {gate['kappa']:.3f} < --min-kappa {args.min_kappa}")
         ok = False
+    if args.min_recall is not None and gate["recall_of_wrong_words"] < args.min_recall:
+        print(f"recall {gate['recall_of_wrong_words']:.3f} < --min-recall {args.min_recall}")
+        ok = False
+    if args.max_clean_red is not None:
+        clean = s["clean_false_red"] if args.gate == "all" else s["clean_false_red_by_split"]
+        clean = clean if args.gate == "all" else clean.get(args.gate, 0.0)
+        if clean > args.max_clean_red:
+            print(f"clean-read false red {clean:.3f} > --max-clean-red {args.max_clean_red}")
+            ok = False
     print(
         f"{'GO' if ok else 'NO-GO'} (synthetic proxy, {args.gate} voices): word agreement "
         f"{pct(gate['agreement'])}, kappa {gate['kappa']:.3f} (threshold {args.threshold:.0%})"

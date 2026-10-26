@@ -1,8 +1,10 @@
 # Accuracy check (I2-eval): runs the real engine (full-tier ONNX model + GOP scorer) on
 # the native VCTK set, the synthetic British-voice set (TTS reads with injected errors,
 # labels known by construction: the default 80% agreement gate, a proxy) and, if
-# configured, the teacher-labelled learner set. Fails when native false red is >= 5% or
-# word agreement is < 80%. Every part whose inputs are missing (unpublished model, no
+# configured, the teacher-labelled learner set. Fails when native false red is >= 5%,
+# word agreement is < 80%, or (held-out synthetic voices) kappa < 0.30, recall of wrong
+# words < 27% or clean-read false red > 5% (EVAL_MIN_KAPPA / EVAL_MIN_RECALL /
+# EVAL_MAX_CLEAN_RED override). Every part whose inputs are missing (unpublished model, no
 # synthetic audio in the cache, no learner audio or labels) is SKIPPED and passes.
 # See tools/eval/README.md, tools/eval/LABELLING.md and docs/eval-report.md.
 name: eval
