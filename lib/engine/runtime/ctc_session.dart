@@ -11,6 +11,9 @@ import 'package:ffi/ffi.dart';
 import 'package:onnxruntime_v2/src/bindings/onnxruntime_bindings_generated.dart'
     as ort;
 
+import 'cpu_cores.dart';
+import 'execution_providers.dart';
+
 /// Raw CTC logits for one clip: row-major `[frames, vocabSize]`.
 class CtcLogits {
   /// Creates the logits.
@@ -40,10 +43,25 @@ abstract interface class CtcModelSession {
 /// sendable values).
 typedef CtcSessionOpener = CtcModelSession Function(String modelPath);
 
-/// Default number of ONNX Runtime intra-op threads: the device's cores, capped at
-/// 4 (phones have at most 4 fast cores; more threads just contend).
-int defaultInferenceThreads() =>
-    math.min(4, math.max(1, Platform.numberOfProcessors));
+/// `--dart-define=ORT_THREADS=n` overrides [defaultInferenceThreads] (0 or unset:
+/// automatic). For measuring on phones.
+const int configuredInferenceThreads = int.fromEnvironment('ORT_THREADS');
+
+/// `--dart-define=ORT_ACCELERATOR=xnnpack|nnapi|coreml|cpu` asks for an execution
+/// provider (default: CPU only, see [acceleratorPlan]). For measuring on phones.
+final InferenceAccelerator? configuredAccelerator = InferenceAccelerator.parse(
+  const String.fromEnvironment('ORT_ACCELERATOR'),
+);
+
+/// Default number of ONNX Runtime intra-op threads: [configuredInferenceThreads]
+/// when set, else the device's big / performance cores, between 1 and 4
+/// ([inferenceThreadsFor]).
+int defaultInferenceThreads() => configuredInferenceThreads > 0
+    ? configuredInferenceThreads
+    : inferenceThreadsFor(
+        os: Platform.operatingSystem,
+        processors: Platform.numberOfProcessors,
+      );
 
 /// Error reported by ONNX Runtime.
 class OnnxRuntimeException implements Exception {
@@ -75,8 +93,8 @@ const int _apiVersion = 14;
 
 /// The ORT C API table plus one environment, per isolate and library path.
 class _Ort {
-  _Ort(ffi.DynamicLibrary lib) {
-    final base = ort.OnnxRuntimeBindings(lib).OrtGetApiBase();
+  _Ort(ffi.DynamicLibrary lib) : bindings = ort.OnnxRuntimeBindings(lib) {
+    final base = bindings.OrtGetApiBase();
     final getApi = base.ref.GetApi
         .asFunction<ffi.Pointer<ort.OrtApi> Function(int)>();
     final api = getApi(_apiVersion);
@@ -137,8 +155,34 @@ class _Ort {
     () => _Ort(openOnnxRuntimeLibrary(libraryPath)),
   );
 
+  /// The library's exported functions (provider entry points live here).
+  final ort.OnnxRuntimeBindings bindings;
   late final ort.OrtApi api;
   late final ffi.Pointer<ort.OrtEnv> env;
+
+  /// Execution providers this library was built with.
+  late final Set<String> availableProviders = using((arena) {
+    final out = arena<ffi.Pointer<ffi.Pointer<ffi.Char>>>();
+    final count = arena<ffi.Int>();
+    check(
+      api.GetAvailableProviders.asFunction<
+        ort.OrtStatusPtr Function(
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+          ffi.Pointer<ffi.Int>,
+        )
+      >()(out, count),
+    );
+    final names = {
+      for (var i = 0; i < count.value; i++)
+        out.value[i].cast<Utf8>().toDartString(),
+    };
+    check(
+      api.ReleaseAvailableProviders.asFunction<
+        ort.OrtStatusPtr Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, int)
+      >()(out.value, count.value),
+    );
+    return names;
+  });
   late final ffi.Pointer<ort.OrtAllocator> allocator;
   late final ffi.Pointer<ort.OrtMemoryInfo> cpuMemory;
 
@@ -212,17 +256,50 @@ class OrtCtcModelSession implements CtcModelSession {
     this._inputName,
     this._maskName,
     this._outputName,
+    this.accelerator,
+    this.threads,
   );
 
   /// Opens [modelPath] with [threads] intra-op threads (default
-  /// [defaultInferenceThreads]). [libraryPath] overrides where the ONNX Runtime
-  /// library is loaded from (host tests).
+  /// [defaultInferenceThreads]) and, when [accelerator] (default
+  /// [configuredAccelerator]) is available here ([acceleratorPlan]), that
+  /// execution provider; if that fails it opens the model on the CPU provider.
+  /// [libraryPath] overrides where the ONNX Runtime library is loaded from (host
+  /// tests).
   factory OrtCtcModelSession.open(
     String modelPath, {
     int? threads,
     String? libraryPath,
+    InferenceAccelerator? accelerator,
   }) {
     final o = _Ort.instance(libraryPath);
+    final n = threads ?? defaultInferenceThreads();
+    final plan = acceleratorPlan(
+      os: Platform.operatingSystem,
+      available: o.availableProviders,
+      requested: accelerator ?? configuredAccelerator,
+    );
+    for (final a in plan) {
+      try {
+        return _openWith(o, modelPath, n, a);
+      } on Object {
+        // Fall back to the next provider, and finally to plain CPU.
+      }
+    }
+    return _openWith(o, modelPath, n, InferenceAccelerator.cpu);
+  }
+
+  /// Execution providers the ONNX Runtime library at [libraryPath] (default: the
+  /// platform's) was built with, e.g. `{CPUExecutionProvider, XnnpackExecutionProvider}`.
+  static Set<String> availableProviders([String? libraryPath]) =>
+      _Ort.instance(libraryPath).availableProviders;
+
+  static OrtCtcModelSession _openWith(
+    _Ort o,
+    String modelPath,
+    int threads,
+    InferenceAccelerator accelerator,
+  ) {
     final api = o.api;
     final session = using((arena) {
       final optionsOut = arena<ffi.Pointer<ort.OrtSessionOptions>>();
@@ -234,12 +311,14 @@ class OrtCtcModelSession implements CtcModelSession {
         >()(optionsOut),
       );
       final options = optionsOut.value;
+      ffi.Pointer<ffi.Char> str(String v) =>
+          v.toNativeUtf8(allocator: arena).cast();
       try {
         final setThreads =
             api.SetIntraOpNumThreads.asFunction<
               ort.OrtStatusPtr Function(ffi.Pointer<ort.OrtSessionOptions>, int)
             >();
-        o.check(setThreads(options, threads ?? defaultInferenceThreads()));
+        o.check(setThreads(options, threads));
         o.check(
           api.SetInterOpNumThreads.asFunction<
             ort.OrtStatusPtr Function(ffi.Pointer<ort.OrtSessionOptions>, int)
@@ -250,6 +329,53 @@ class OrtCtcModelSession implements CtcModelSession {
             ort.OrtStatusPtr Function(ffi.Pointer<ort.OrtSessionOptions>, int)
           >()(options, ort.GraphOptimizationLevel.ORT_ENABLE_ALL),
         );
+        final config =
+            api.AddSessionConfigEntry.asFunction<
+              ort.OrtStatusPtr Function(
+                ffi.Pointer<ort.OrtSessionOptions>,
+                ffi.Pointer<ffi.Char>,
+                ffi.Pointer<ffi.Char>,
+              )
+            >();
+        switch (accelerator) {
+          case InferenceAccelerator.cpu:
+            break;
+          case InferenceAccelerator.xnnpack:
+            // XNNPACK brings its own thread pool: keep ORT's from spinning
+            // against it (ONNX Runtime's XNNPACK guidance).
+            o.check(
+              config(options, str('session.intra_op.allow_spinning'), str('0')),
+            );
+            final keys = arena<ffi.Pointer<ffi.Char>>()
+              ..value = str('intra_op_num_threads');
+            final values = arena<ffi.Pointer<ffi.Char>>()
+              ..value = str('$threads');
+            o.check(
+              api.SessionOptionsAppendExecutionProvider.asFunction<
+                ort.OrtStatusPtr Function(
+                  ffi.Pointer<ort.OrtSessionOptions>,
+                  ffi.Pointer<ffi.Char>,
+                  ffi.Pointer<ffi.Pointer<ffi.Char>>,
+                  ffi.Pointer<ffi.Pointer<ffi.Char>>,
+                  int,
+                )
+              >()(options, str('XNNPACK'), keys, values, 1),
+            );
+          case InferenceAccelerator.nnapi:
+            o.check(
+              o.bindings.OrtSessionOptionsAppendExecutionProvider_Nnapi(
+                options,
+                0,
+              ),
+            );
+          case InferenceAccelerator.coreml:
+            o.check(
+              o.bindings.OrtSessionOptionsAppendExecutionProvider_CoreML(
+                options,
+                0,
+              ),
+            );
+        }
         final out = arena<ffi.Pointer<ort.OrtSession>>();
         o.check(
           api.CreateSession.asFunction<
@@ -259,12 +385,7 @@ class OrtCtcModelSession implements CtcModelSession {
               ffi.Pointer<ort.OrtSessionOptions>,
               ffi.Pointer<ffi.Pointer<ort.OrtSession>>,
             )
-          >()(
-            o.env,
-            modelPath.toNativeUtf8(allocator: arena).cast(),
-            options,
-            out,
-          ),
+          >()(o.env, str(modelPath), options, out),
         );
         return out.value;
       } finally {
@@ -280,8 +401,22 @@ class OrtCtcModelSession implements CtcModelSession {
         : inputs.first;
     final mask = inputs.contains('attention_mask') ? 'attention_mask' : null;
     final output = outputs.contains('logits') ? 'logits' : outputs.first;
-    return OrtCtcModelSession._(o, session, input, mask, output);
+    return OrtCtcModelSession._(
+      o,
+      session,
+      input,
+      mask,
+      output,
+      accelerator,
+      threads,
+    );
   }
+
+  /// The execution provider the session runs on (besides CPU).
+  final InferenceAccelerator accelerator;
+
+  /// ONNX Runtime intra-op threads.
+  final int threads;
 
   /// [CtcSessionOpener] with default settings.
   static CtcModelSession opener(String modelPath) =>
