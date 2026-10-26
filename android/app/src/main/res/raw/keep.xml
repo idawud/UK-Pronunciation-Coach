@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resource shrinking (release builds) removes resources that code does not reference
+     by R.id. flutter_local_notifications looks the reminder icon up by name at run time,
+     so keep it (its README, "Release build configuration"). -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_notification,@drawable/ic_launcher_foreground,@drawable/ic_launcher_monochrome" />
