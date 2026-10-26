@@ -32,3 +32,10 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# Release signing (R1-release): written from secrets by release.yml, never committed.
+Flutter/Signing.xcconfig
+ExportOptions.plist
+*.mobileprovision
+*.p12
+*.p8

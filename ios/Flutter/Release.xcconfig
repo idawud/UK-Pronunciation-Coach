@@ -1,1 +1,5 @@
 #include "Generated.xcconfig"
+// Release signing for CI (R1-release, docs/release.md): .github/workflows/release.yml
+// writes Signing.xcconfig from GitHub secrets. It is git-ignored and optional, so
+// local builds keep Xcode's automatic signing.
+#include? "Signing.xcconfig"
