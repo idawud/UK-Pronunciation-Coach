@@ -10,9 +10,13 @@ Full write-up: docs/eval-report.md, "Accuracy pass". Short version:
   `ScoringConfig.i2Calibration`.
 - **Held-out, full tier**: kappa 0.271 to 0.319, recall 23.1% to 29.5%, clean-read false
   red 2.7% to 3.8%, VCTK false red 2.2% to 3.5%. Agreement unchanged at 87.9%.
-- **Not suitable for the light tier**: its false red rises from 6.0% to 16.1% on VCTK. It
-  needs its own curve and offsets (run `gop_search.py` on a light feature run). Most urgent
-  follow-up if the light model ships as the default.
+- **Light tier keeps the old calibration** until it gets its own fit: the new defaults
+  raised its VCTK false red from 6.0% to 16.1%. The scorer now selects per tier
+  (`GopPronunciationScorer.configFor(tier)`, `ScoringConfig.forTier`, `ScoringConfig.light`
+  = `i2Calibration`, no offsets, no syllabic forms), so light measures 5.9% VCTK false red
+  as before and full keeps the gains. Next: a light-tier `gop_search.py` fit and the British
+  fine-tune. The eval harness now tags posteriors with `EVAL_TIER` (before, all runs were
+  tagged light).
 - **Tools**: `tools/eval/gop_search.py` re-scores `EVAL_FEATURES=1` harness dumps offline
   (a 500-variant grid takes about 3 minutes). `tools/eval/alternatives.py` plus `build_set`/
   `synth.build` write alternative pronunciations into the eval passages.

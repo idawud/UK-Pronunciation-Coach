@@ -18,3 +18,7 @@ To re-tune, use `tools/eval/` (`run_harness.sh`, `calibrate.py`). Then change th
 defaults here, or load JSON with `ScoringConfig.fromJson` and pass it to
 `GopPronunciationScorer(config: ...)`. Note that a JSON `extraAccepted` replaces the
 default map; it is not merged into it. Re-tune once A4's light model exists.
+
+Per tier: the scorer uses `ScoringConfig()` (accuracy-pass defaults, fitted on the full
+tier) for full-tier posteriors and `ScoringConfig.light` (the earlier calibration) for
+light-tier ones; see `ScoringConfig.forTier`.
