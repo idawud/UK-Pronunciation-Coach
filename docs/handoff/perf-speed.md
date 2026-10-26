@@ -81,10 +81,12 @@ to 5.5% (light) of frames and GOP is sensitive near thresholds. For both tiers l
 fewer non-green words on mostly correct reads, i.e. it errs towards the truth, and the
 light tier is clearly less stable on long clips whole (54% of words not green on mostly
 correct reads). Raising the context to 640 ms or 1.5 s changed light agreement only from
-66% to 69-71% so it was left at 160 ms. **Decision for the reviewer**: live is on for both
-tiers; if a score-identical result matters more than latency, set `liveScoring` default
-to false (`LIVE_SCORING`) or restrict it to the full tier. I2 should recalibrate the
-thresholds on live posteriors (A3 files not touched here).
+66% to 69-71% so it was left at 160 ms. **Decision taken on merge**: live scoring is
+**off by default** (`liveScoring` default false), so merging this branch does not change
+anyone's scores; turn it on with `--dart-define=LIVE_SCORING=true` to measure it on a
+phone. Flipping the default needs the scoring config recalibrated on live posteriors
+(A3/I2 files are not touched here), and the light tier needs its divergence reduced or
+live restricted to the full tier.
 
 ## Phone estimates (ESTIMATES, not measured)
 
