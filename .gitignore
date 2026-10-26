@@ -62,3 +62,4 @@ assets/models/*.onnx
 assets/models/*-vocab.json
 .model-cache/
 *.iml
+store/screenshots/
