@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Export options for `flutter build ipa --export-options-plist` (R1-release).
+<!-- Export options for flutter build ipa, export-options-plist option (R1-release).
      release.yml fills ${IOS_TEAM_ID} and ${IOS_PROFILE_NAME} with envsubst; for a local
      build, copy it to ExportOptions.plist (git-ignored) and replace them by hand. -->
 <plist version="1.0">
