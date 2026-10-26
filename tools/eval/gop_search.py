@@ -138,9 +138,7 @@ def read_csv(path: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
-VOWELS = frozenset(
-    "ɪ ɛ e æ ʌ ɒ ʊ ə ɐ i u iː ɑː ɔː uː ɜː eɪ aɪ ɔɪ əʊ oʊ aʊ ɪə eə ɛə ɛː ʊə".split()
-)
+VOWELS = frozenset("ɪ ɛ e æ ʌ ɒ ʊ ə ɐ i u iː ɑː ɔː uː ɜː eɪ aɪ ɔɪ əʊ oʊ aʊ ɪə eə ɛə ɛː ʊə".split())
 PUNCTUATION = frozenset(".,;:!?")
 
 
@@ -390,9 +388,11 @@ def correct_gops(
         (native, lambda r: r["kind"] == "native" and r["split"] == split),
         (
             synth,
-            lambda r: (lab := labels.rows.get((r["item"], r["word_index"]))) is not None
-            and lab["split"] == split
-            and lab["read"] == "clean",
+            lambda r: (
+                (lab := labels.rows.get((r["item"], r["word_index"]))) is not None
+                and lab["split"] == split
+                and lab["read"] == "clean"
+            ),
         ),
     ):
         g = gop_values(d, s)
