@@ -80,6 +80,8 @@ class ScoringConfig {
     this.pauseWeight = 0.3,
     this.continuityWeight = 0.3,
     this.extraAccepted = defaultExtraAccepted,
+    this.syllabicConsonants = true,
+    this.phonemeGopOffset = defaultPhonemeGopOffset,
   });
 
   /// Decodes a config; missing keys keep their defaults.
@@ -133,6 +135,13 @@ class ScoringConfig {
       rateWeight: n('rateWeight', d.rateWeight),
       pauseWeight: n('pauseWeight', d.pauseWeight),
       continuityWeight: n('continuityWeight', d.continuityWeight),
+      syllabicConsonants:
+          json['syllabicConsonants'] as bool? ?? d.syllabicConsonants,
+      phonemeGopOffset:
+          (json['phonemeGopOffset'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, (v as num).toDouble()),
+          ) ??
+          d.phonemeGopOffset,
       extraAccepted: extra == null
           ? d.extraAccepted
           : {
@@ -143,10 +152,80 @@ class ScoringConfig {
   }
 
   /// GOP margin (expected minus best competitor, mean log-posterior over the
-  /// phoneme's frames) -> 0-100. I2-eval: A3's curve moved 2 nats more lenient,
-  /// tuned on 3 native Southern English VCTK speakers to < 3.5% false red words
-  /// (3.7% on 2 held-out speakers) with 89% of controlled errors still red.
+  /// phoneme's frames) -> 0-100, applied after [defaultPhonemeGopOffset]. I2-eval
+  /// accuracy pass: the earlier curve ([i2Calibration]) moved stricter and combined
+  /// with per-phoneme offsets; chosen on the tuning voices and speakers under a 2
+  /// percent false-red cap (see docs/eval-report.md).
   static const PiecewiseLinear defaultCalibration = PiecewiseLinear([
+    (-5.8, 0),
+    (-3.4, 10),
+    (-1.8, 30),
+    (-1, 50),
+    (-0.2, 65),
+    (0.6, 78),
+    (1.4, 86),
+    (3, 95),
+    (5.4, 100),
+  ]);
+
+  /// Per-phoneme GOP shifts for [defaultCalibration] (each sound's 10th-percentile
+  /// GOP on correct tuning speech relative to all sounds, shrunk for rare sounds).
+  static const Map<String, double> defaultPhonemeGopOffset = {
+    'aɪ': 1.87,
+    'aʊ': 0.4,
+    'b': 1.17,
+    'd': 1,
+    'dʒ': 1.05,
+    'eə': -4.24,
+    'eɪ': 1.38,
+    'f': 1.96,
+    'g': 1.02,
+    'h': 3.37,
+    'i': 0.85,
+    'iː': 0.54,
+    'j': 2.58,
+    'k': 2.61,
+    'l': 3.52,
+    'l̩': -0.72,
+    'm': 2.6,
+    'n': 2.25,
+    'n̩': 1.82,
+    'p': 2.53,
+    's': 2.25,
+    't': 1.62,
+    'tʃ': 0.35,
+    'uː': -0.37,
+    'v': 2.95,
+    'w': 3.32,
+    'z': 1.62,
+    'æ': 0.74,
+    'ð': 1.92,
+    'ŋ': 0.69,
+    'ɐ': 0.34,
+    'ɑː': -1.88,
+    'ɒ': -2.56,
+    'ɔɪ': -0.85,
+    'ɔː': -1.79,
+    'ə': -0.48,
+    'əʊ': 0.39,
+    'ɛ': 0.8,
+    'ɛə': -0.87,
+    'ɜː': 0.27,
+    'ɡ': 1.61,
+    'ɪ': -0.52,
+    'ɪə': -3.71,
+    'ɹ': 3.3,
+    'ʃ': -1.09,
+    'ʊ': -2.56,
+    'ʊə': -3.55,
+    'ʌ': -0.27,
+    'ʒ': 0.22,
+    'θ': -0.02,
+  };
+
+  /// I2-eval's first calibration (tuned on 3 native VCTK speakers, no per-phoneme
+  /// offsets), kept for comparison.
+  static const PiecewiseLinear i2Calibration = PiecewiseLinear([
     (-6.8, 0),
     (-4.4, 10),
     (-2.8, 30),
@@ -286,6 +365,15 @@ class ScoringConfig {
   /// built-in mapping table (e.g. `{"ɒ": ["ɑ"]}`).
   final Map<String, List<String>> extraAccepted;
 
+  /// Also score `ə l` / `ə n` ending a syllable as syllabic `l̩` / `n̩` (an extra
+  /// alternative per word; the best-matching form wins).
+  final bool syllabicConsonants;
+
+  /// Per-phoneme GOP shift (normalised IPA -> nats), subtracted from a phoneme's
+  /// GOP before [calibration]: the phoneme's typical GOP on correct native speech
+  /// relative to the others, so one curve fits every sound (empty: no shift).
+  final Map<String, double> phonemeGopOffset;
+
   /// Encodes every field.
   Map<String, dynamic> toJson() => {
     'calibration': calibration.toJson(),
@@ -315,11 +403,17 @@ class ScoringConfig {
     'pauseWeight': pauseWeight,
     'continuityWeight': continuityWeight,
     'extraAccepted': extraAccepted,
+    'syllabicConsonants': syllabicConsonants,
+    'phonemeGopOffset': phonemeGopOffset,
   };
 
-  /// Phoneme score for a GOP margin, 0-100.
-  int phonemeScore(double gop) =>
-      calibration(gop).round().clamp(0, 100).toInt();
+  /// Phoneme score for a GOP margin, 0-100. With [phoneme] (normalised IPA), its
+  /// [phonemeGopOffset] is applied first.
+  int phonemeScore(double gop, [String? phoneme]) =>
+      calibration(gop - (phoneme == null ? 0 : phonemeGopOffset[phoneme] ?? 0))
+          .round()
+          .clamp(0, 100)
+          .toInt();
 
   /// Rate score for [wpm], 0-100.
   double rateScore(double wpm) => math.max(0, math.min(100, rateCurve(wpm)));

@@ -57,7 +57,10 @@ void main() {
       }
       expect(d.phonemeScore(-10), 0);
       expect(d.phonemeScore(10), 100);
-      expect(d.phonemeScore(-2), 50); // I2-eval: 2 nats more lenient than A3
+      expect(d.phonemeScore(-1), 50); // accuracy pass curve (no phoneme offset)
+      expect(ScoringConfig.i2Calibration(-2), 50);
+      // A phoneme with a positive offset needs a larger margin for the same score.
+      expect(d.phonemeScore(0, 'ɹ'), lessThan(d.phonemeScore(0)));
       expect(ScoringConfig.a3Calibration(0), 50);
     });
 
