@@ -9,6 +9,7 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
@@ -255,6 +256,27 @@ String csvField(Object? v) {
 /// One CSV line.
 String csvLine(List<Object?> fields) => fields.map(csvField).join(',');
 
+/// The pronunciation a word was scored against: its main form, or the
+/// alternative (including the scorer's own syllabic `l̩` / `n̩` forms) whose
+/// phonemes the result reports (the scorer keeps the best).
+List<PhonemeSpec> scoredForm(WordSpec spec, List<PhonemeResult> result) {
+  bool same(List<PhonemeSpec> form) {
+    if (form.length != result.length) return false;
+    for (var i = 0; i < form.length; i++) {
+      if (form[i].ipa != result[i].expected) return false;
+    }
+    return true;
+  }
+
+  if (result.isEmpty || same(spec.phonemes)) return spec.phonemes;
+  for (final form in [spec.phonemes, ...spec.alternatives]) {
+    if (same(form)) return form;
+    final syllabic = GopPronunciationScorer.syllabicForm(form);
+    if (syllabic != null && same(syllabic)) return syllabic;
+  }
+  return spec.phonemes;
+}
+
 /// Per-word rows for one scored item.
 List<List<Object?>> wordRows(
   String config,
@@ -266,6 +288,7 @@ List<List<Object?>> wordRows(
     () {
       final spec = passage.words[w.index];
       final ph = w.phonemes;
+      final form = scoredForm(spec, ph);
       return <Object?>[
         config,
         item.item,
@@ -278,8 +301,8 @@ List<List<Object?>> wordRows(
         item.target == w.index ? 1 : 0,
         w.status.name,
         w.score,
-        spec.phonemes.map((p) => p.ipa).join(' '),
-        spec.phonemes.map((p) => p.stress).join(' '),
+        form.map((p) => p.ipa).join(' '),
+        form.map((p) => p.stress).join(' '),
         ph.isEmpty
             ? ''
             : ph
@@ -304,6 +327,9 @@ class EvalOutput {
   /// Clip CSV lines (with header) per config name.
   final Map<String, List<String>> clips = {};
 
+  /// Per-phoneme feature CSV lines (with header) per config name, when asked for.
+  final Map<String, List<String>> features = {};
+
   /// Writes `words_<config>.csv` and `clips_<config>.csv` into [dir].
   void writeTo(Directory dir) {
     dir.createSync(recursive: true);
@@ -313,6 +339,10 @@ class EvalOutput {
     }
     for (final e in clips.entries) {
       File('${dir.path}/clips_${e.key}.csv')
+          .writeAsStringSync('${e.value.join('\n')}\n');
+    }
+    for (final e in features.entries) {
+      File('${dir.path}/features_${e.key}.csv')
           .writeAsStringSync('${e.value.join('\n')}\n');
     }
   }
@@ -325,6 +355,7 @@ Future<EvalOutput> runEval({
   required PosteriorSource source,
   Map<String, ScoringConfig> configs = const {'default': ScoringConfig()},
   void Function(String message)? log,
+  bool features = false,
 }) async {
   final out = EvalOutput();
   final scorers = {
@@ -334,6 +365,7 @@ Future<EvalOutput> runEval({
   for (final name in configs.keys) {
     out.words[name] = [csvLine(wordCsvHeader)];
     out.clips[name] = [csvLine(clipCsvHeader)];
+    if (features) out.features[name] = [csvLine(featureCsvHeader)];
   }
   final byWav = <String, List<EvalItem>>{};
   for (final it in items) {
@@ -356,6 +388,11 @@ Future<EvalOutput> runEval({
         out.words[name]!.addAll(
           wordRows(name, it, passage, a.words).map(csvLine),
         );
+        if (features) {
+          out.features[name]!.addAll(
+            featureRows(it, passage, post, a, scorer.config).map(csvLine),
+          );
+        }
         out.clips[name]!.add(
           csvLine([
             name,
@@ -397,4 +434,140 @@ Map<String, ScoringConfig> parseConfigs(String spec) {
           );
   }
   return out.isEmpty ? {'default': const ScoringConfig()} : out;
+}
+
+/// Header of the per-phoneme feature CSV (`EVAL_FEATURES=1`).
+const featureCsvHeader = [
+  'item',
+  'word_index',
+  'phoneme_index',
+  'expected',
+  'stress',
+  'status',
+  'heard',
+  'score',
+  'frames',
+  'ext_frames',
+  'speech',
+  'exp_mean',
+  'exp_peak',
+  'competitors',
+];
+
+/// Per-phoneme GOP features of one scored item, for offline GOP research
+/// (`tools/eval/gop_search.py`): the phoneme's aligned frames (its units' own
+/// frames) and its extended span (up to the neighbouring units), the expected
+/// sound's mean log-posterior over its frames and peak over the extended span, and
+/// the best competing phones (`symbol:mean:peak`, mean over the phoneme's frames,
+/// peak over the extended span; best 10 by mean). Rebuilds the scorer's units
+/// from the forms the analysis chose; returns no rows when that does not match
+/// the alignment.
+List<List<Object?>> featureRows(
+  EvalItem item,
+  Passage passage,
+  PhonemePosteriors post,
+  ScoringAnalysis a,
+  ScoringConfig config,
+) {
+  final align = a.alignment;
+  if (align == null) return const [];
+  final vocab = ModelVocab(post.vocab, post.blankIndex);
+  final mapper = PhonemeMapper(vocab, extraAccepted: config.extraAccepted);
+  final frames = post.frames;
+  // (word index, phoneme index, first unit, unit count, spec) per phoneme.
+  final phones = <(int, int, int, int, PhonemeSpec)>[];
+  var units = 0;
+  for (final w in passage.words) {
+    if (!w.scorable) continue;
+    final form = scoredForm(w, a.words[w.index].phonemes);
+    final first = units;
+    final rows = <(int, int, int, int, PhonemeSpec)>[];
+    for (var p = 0; p < form.length; p++) {
+      final n = mapper.unitsFor(form[p].ipa).length;
+      rows.add((w.index, p, units, n, form[p]));
+      units += n;
+    }
+    if (units > first) phones.addAll(rows);
+  }
+  if (units != align.unitStart.length) return const [];
+  // Best 8 phones per frame, computed once per frame.
+  final tops = <int, List<int>>{};
+  List<int> topOf(int t) => tops.putIfAbsent(t, () {
+    final f = frames[t];
+    final best = <int>[];
+    for (final i in vocab.phoneIds) {
+      if (best.length == 8 && f[i] <= f[best.last]) continue;
+      var k = best.length < 8 ? best.length : 7;
+      if (best.length < 8) best.add(i);
+      while (k > 0 && f[best[k - 1]] < f[i]) {
+        best[k] = best[k - 1];
+        k--;
+      }
+      best[k] = i;
+    }
+    return best;
+  });
+  final out = <List<Object?>>[];
+  for (final (wi, p, u0, n, spec) in phones) {
+    if (n == 0 || align.unitStart[u0] < 0) continue;
+    final r = a.words[wi];
+    if (p >= r.phonemes.length) continue;
+    final s = align.unitStart[u0];
+    final e = align.unitEnd[u0 + n - 1];
+    final xs = u0 > 0 && align.unitEnd[u0 - 1] >= 0 ? align.unitEnd[u0 - 1] : s;
+    final xe = u0 + n < units && align.unitStart[u0 + n] >= 0
+        ? align.unitStart[u0 + n]
+        : e;
+    final ids = <int>{
+      for (var u = 0; u < n; u++) ...mapper.unitsFor(spec.ipa)[u].ids,
+    };
+    double expAt(int t) =>
+        ids.map((i) => frames[t][i].toDouble()).reduce(math.max);
+    var expSum = 0.0;
+    var speech = 0.0;
+    for (var t = s; t < e; t++) {
+      expSum += expAt(t);
+      speech += 1 - math.exp(frames[t][post.blankIndex]);
+    }
+    var expPeak = double.negativeInfinity;
+    final cands = <int>{};
+    for (var t = xs; t < xe; t++) {
+      expPeak = math.max(expPeak, expAt(t));
+      cands.addAll(topOf(t).where((i) => !ids.contains(i)).take(6));
+    }
+    final comps = [
+      for (final c in cands)
+        (
+          c,
+          [for (var t = s; t < e; t++) frames[t][c]].reduce((x, y) => x + y) /
+              (e - s),
+          [for (var t = xs; t < xe; t++) frames[t][c]].reduce(math.max),
+        ),
+    ]..sort((x, y) => y.$2.compareTo(x.$2));
+    final ph = r.phonemes[p];
+    out.add([
+      item.item,
+      wi,
+      p,
+      spec.ipa,
+      spec.stress,
+      r.status.name,
+      ph.heard == null ? '' : (ph.heard!.isEmpty ? droppedMark : ph.heard),
+      ph.score,
+      e - s,
+      xe - xs,
+      (speech / (e - s)).toStringAsFixed(3),
+      (expSum / (e - s)).toStringAsFixed(3),
+      expPeak.toStringAsFixed(3),
+      comps
+          .take(10)
+          .map(
+            (c) =>
+                '${vocab.symbols[c.$1]}:${c.$2.toStringAsFixed(3)}:'
+                '${c.$3.toStringAsFixed(3)}',
+          )
+          .join('|'),
+    ]);
+  }
+  return out;
 }
