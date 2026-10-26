@@ -114,7 +114,7 @@ class GopPronunciationScorer implements PronunciationScorer {
 
   @override
   WordResult scoreWord(WordSpec word, PhonemePosteriors posteriors) {
-    final r = _bestVariant(word, posteriors).result;
+    final r = _bestVariant(_withSyllabicForms(word), posteriors).result;
     return r.copyWith(index: word.index, text: word.text);
   }
 
@@ -131,6 +131,11 @@ class GopPronunciationScorer implements PronunciationScorer {
     PhonemePosteriors posteriors,
     List<Segment> speech,
   ) {
+    if (config.syllabicConsonants) {
+      passage = passage.copyWith(
+        words: [for (final w in passage.words) _withSyllabicForms(w)],
+      );
+    }
     final first = _Analysis(this, passage, posteriors, speech).run();
     if (!passage.words.any((w) => w.scorable && w.alternatives.isNotEmpty)) {
       return first;
@@ -165,6 +170,44 @@ class GopPronunciationScorer implements PronunciationScorer {
       posteriors,
       speech,
     ).run();
+  }
+
+  /// [word] with an extra alternative per form that has `ə l` or `ə n` before a
+  /// consonant or at the end of the word ("people", "button"): the same form with
+  /// a syllabic `l̩` / `n̩`. The phoneme model often writes such a syllable as one
+  /// token (`əl`), which two separate units cannot both claim, so one of them looked
+  /// dropped (I2 contract request 1). The alternative search keeps the form that
+  /// matches best, so a reader who says both sounds still matches the main form.
+  WordSpec _withSyllabicForms(WordSpec word) {
+    if (!config.syllabicConsonants || !word.scorable) return word;
+    final added = <List<PhonemeSpec>>[];
+    for (final form in [word.phonemes, ...word.alternatives]) {
+      final s = syllabicForm(form);
+      if (s != null) added.add(s);
+    }
+    if (added.isEmpty) return word;
+    return word.copyWith(alternatives: [...word.alternatives, ...added]);
+  }
+
+  /// [form] with every `ə l` / `ə n` that ends a syllable (before a consonant or at
+  /// the end) written as syllabic `l̩` / `n̩`; null when it has none.
+  static List<PhonemeSpec>? syllabicForm(List<PhonemeSpec> form) {
+    final out = <PhonemeSpec>[];
+    var changed = false;
+    for (var i = 0; i < form.length; i++) {
+      final next = i + 1 < form.length ? normalizeIpa(form[i + 1].ipa) : '';
+      final after = i + 2 < form.length ? normalizeIpa(form[i + 2].ipa) : '';
+      if (normalizeIpa(form[i].ipa) == 'ə' &&
+          (next == 'l' || next == 'n') &&
+          !ssbeVowels.contains(after)) {
+        out.add(PhonemeSpec(ipa: next == 'l' ? 'l̩' : 'n̩'));
+        changed = true;
+        i++;
+      } else {
+        out.add(form[i]);
+      }
+    }
+    return changed ? out : null;
   }
 
   /// Frames between the spoken words around word [index] in a first-pass result:
@@ -584,7 +627,7 @@ class _Analysis {
       return _PhonemeStats(config.droppedScore, '', start, end);
     }
     return _PhonemeStats(
-      config.phonemeScore(gopSum / n),
+      config.phonemeScore(gopSum / n, normalizeIpa(plan.word.phonemes[p].ipa)),
       anyHeard ? heardParts.join() : null,
       start,
       end,
