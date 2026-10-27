@@ -37,7 +37,7 @@ Private and offline
 - Delete all your data at any time from Settings.
 
 Honest about what it is
-The app compares your sounds with a British English reference. It is a practice aid, not an examiner, and scores are a guide. It works best in a quiet room with the phone held at a normal reading distance. It is built for learners of English; it does not teach other accents.
+The app compares your sounds with a British English reference. It is a practice aid, not an examiner, and scores are a guide. In this early version it catches clear mispronunciations but misses many subtle ones, and it accepts a few American sounds as correct. It works best in a quiet room with the phone held at a normal reading distance. It is built for learners of English; it does not teach other accents.
 
 Free and built with open-source speech models. Licences are listed in the app under Settings.
 
@@ -53,9 +53,31 @@ First release.
 
 ## Beta notes (TestFlight / Play internal testing)
 
+Paste this into the TestFlight "Test Information / What to Test" box and the Play internal
+testing release notes.
+
 Thanks for testing. Please practise a few times a week for four weeks, re-read some passages,
-and tell us what felt wrong. Settings > Send feedback opens an email draft; you can attach your
-progress file if you want to, and the app never sends anything by itself.
+and tell us what felt wrong.
+
+What to expect in this beta
+- The app reliably flags clear mispronunciations, for example "think" said as "tink". It misses
+  many subtler ones: on our test set it caught roughly 3 in 10 of the mistakes we put in. Vowel
+  errors, z/s, dropped h and wrong word stress are the weakest areas.
+- The speech model was trained mainly on American English labels, so a few American
+  pronunciations are accepted as correct: the "hot" vowel, and sounding the r in words like "car".
+- It rarely marks correct British speech as wrong: about 2% of correct words in our
+  measurement on native British speakers (full model; the smaller bundled model is less
+  careful, about 6%). A red word is therefore worth a look, but a green word is not proof
+  that you said it right.
+- Everything runs on your phone. No recordings leave the device.
+
+The feedback that helps most
+1. Words you said wrongly (or knew you were unsure of) that the app marked green.
+2. Words you said correctly that the app marked red.
+Settings > Send feedback opens an email draft; give the passage and the word, and attach your
+progress file if you want to. The app never sends anything by itself.
+
+(Source of the figures: `docs/eval-report.md`. Update this block when the numbers change.)
 
 ## Screenshot plan
 
@@ -70,5 +92,5 @@ Sizes: iPhone 6.9" (1320x2868) and 6.5" (1284x2778), iPad 13" (2064x2752), Play 
 (1080x1920 or larger), Play 7" and 10" tablet. Generate them with
 `STORE_SCREENSHOTS=1 flutter test test/store/store_screenshots_test.dart` (writes
 `store/screenshots/<device>/`, see docs/release.md). Add captions in the store consoles or a design tool.
-Play also needs the 512x512 icon (`store/icon/play-icon-512.png`) and a 1024x500 feature graphic
-(to be designed; none is committed).
+Play also needs the 512x512 icon (`store/icon/play-icon-512.png`) and the 1024x500 feature graphic
+(`store/play/feature-graphic.png`, made by `python -m tools.release.feature_graphic`).
