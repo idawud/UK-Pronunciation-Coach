@@ -182,8 +182,10 @@ Everything below needs your accounts or machine; none of it was done by an agent
 
 1. [ ] Set `FEEDBACK_EMAIL` (repository variable) or confirm the built-in default address is
    the one you want to receive feedback.
-2. [ ] Publish the `models-v1` release and real URLs/SHA-256 in `assets/models/manifest.json`
-   (see "Before the first tag").
+2. [x] ~~Publish the `models-v1` release and real URLs/SHA-256 in
+   `assets/models/manifest.json`~~ — done on 2026-10-27. Published (not a pre-release) at
+   [idawud/UK-Pronunciation-Coach-models](https://github.com/idawud/UK-Pronunciation-Coach-models/releases/tag/models-v1);
+   the real URLs and checksums are already committed in the manifest.
 3. [ ] Create the Android upload keystore (`keytool` command above); store it and its passwords
    in a password manager.
 4. [ ] Add the GitHub secrets and variables from the table above (Android four first; iOS five;
