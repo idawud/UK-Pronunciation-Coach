@@ -14,11 +14,15 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 /// while it is in place.
 const String feedbackEmailPlaceholder = 'feedback@example.invalid';
 
+/// The project's own feedback address, used when a build sets no override.
+const String feedbackEmailDefault = 'idawudinho@outlook.com';
+
 /// The feedback address of this build: `--dart-define=FEEDBACK_EMAIL=<address>`
-/// (release.yml passes the `FEEDBACK_EMAIL` repository variable; docs/release.md).
+/// overrides it (release.yml passes the `FEEDBACK_EMAIL` repository variable;
+/// docs/release.md).
 const String feedbackEmailDefine = String.fromEnvironment(
   'FEEDBACK_EMAIL',
-  defaultValue: feedbackEmailPlaceholder,
+  defaultValue: feedbackEmailDefault,
 );
 
 /// Returns [address] when it looks like a usable email address, otherwise null
