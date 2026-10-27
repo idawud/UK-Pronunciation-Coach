@@ -20,6 +20,7 @@ Related settings
 - Export compliance: uses only standard HTTPS (exempt); `ITSAppUsesNonExemptEncryption`
   is not set in Info.plist, so answer the export-compliance questions in App Store Connect (standard encryption only, exempt).
 - Age rating: 4+. Category: Education. Secondary: Reference.
-- Privacy policy URL: required; use the hosted `store/privacy-policy.md`.
+- Privacy policy URL: required. Use https://idawud.github.io/UK-Pronunciation-Coach/privacy/
+  (built from `store/privacy-policy.md` by `.github/workflows/pages.yml`; works once Pages is on, see `docs/release.md`).
 - TestFlight: external testers need Beta App Review; give it the beta notes from
   `docs/release.md`.

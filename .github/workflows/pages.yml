@@ -1,0 +1,41 @@
+# Publishes the privacy policy (store/privacy-policy.md) as a plain web page.
+# Needs one owner setting first: Settings > Pages > Build and deployment > Source:
+# GitHub Actions. See docs/release.md. Until then the deploy job fails; nothing else is affected.
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - store/privacy-policy.md
+      - tools/release/site.py
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m tools.release.site --out _site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

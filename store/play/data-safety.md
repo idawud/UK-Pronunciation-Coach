@@ -29,5 +29,5 @@ Other Play forms
   purchases. Expected: Everyone / PEGI 3.
 - Target audience: 13 and over (general learners). Not designed for children, so no Families policy.
 - Ads: No. Government app: No. Financial features: None. Health features: None.
-- Privacy policy URL: required by Play for apps that use the microphone. Host
-  `store/privacy-policy.md` (as a public web page) and paste the URL.
+- Privacy policy URL: required by Play for apps that use the microphone. Use https://idawud.github.io/UK-Pronunciation-Coach/privacy/
+  (built from `store/privacy-policy.md` by `.github/workflows/pages.yml`; works once Pages is on, see `docs/release.md`).
