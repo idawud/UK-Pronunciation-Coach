@@ -119,6 +119,8 @@ jobs:
   ios:
     name: ios signed build
     needs: [checks, integration-gate]
+    # Skipped until the iOS signing secrets exist, so an Android-only beta can ship.
+    if: ${{ vars.BUILD_IOS == 'true' }}
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
@@ -194,6 +196,8 @@ jobs:
   github-release:
     name: github release
     needs: [android, ios]
+    # Runs when ios was skipped; still blocked if android or ios actually failed.
+    if: ${{ always() && needs.android.result == 'success' && needs.ios.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

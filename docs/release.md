@@ -40,6 +40,11 @@ Push a tag `vX.Y.Z` (or `vX.Y.Z-beta.N`, which becomes a pre-release) on a commi
 
 Add under Settings > Secrets and variables > Actions. Never commit any of these.
 
+> **iOS is off by default.** The iOS build and TestFlight jobs only run when the
+> repository variable `BUILD_IOS` is `true`. Leave it unset to ship an Android-only beta;
+> set it once the five iOS secrets below exist (needs a paid Apple Developer account).
+
+
 | Name | Kind | Used for |
 | --- | --- | --- |
 | `ANDROID_KEYSTORE_BASE64` | secret | upload keystore, `base64 -w0 upload.jks` |
