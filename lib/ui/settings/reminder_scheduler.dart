@@ -52,11 +52,17 @@ final reminderSchedulerProvider = Provider<ReminderScheduler>(
 final reminderRestoreProvider = FutureProvider<void>((ref) async {
   final scheduler = ref.read(reminderSchedulerProvider);
   if (!scheduler.isSupported) return;
+  // The app (and with it the database) can shut down while this is in flight; the
+  // read then fails because the channel closed, which is not a scheduling failure.
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
   try {
-    final minutes =
-        (await ref.read(progressRepositoryProvider).profile()).reminderMinutes;
+    final repository = ref.read(progressRepositoryProvider);
+    final minutes = (await repository.profile()).reminderMinutes;
+    if (disposed) return;
     if (minutes != null) await scheduler.scheduleDaily(minutes);
   } on Object catch (e) {
+    if (disposed) return;
     debugPrint('Reminder: could not restore the daily reminder ($e).');
   }
 });
