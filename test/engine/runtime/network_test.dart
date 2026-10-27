@@ -18,14 +18,25 @@ class _CountingOverrides extends HttpOverrides {
 }
 
 void main() {
-  test('HttpModelTransport builds no HttpClient until a request is made', () {
+  test('HttpModelTransport builds no HttpClient until a request is made', () async {
+    // A port that nothing listens on: bound to learn a free one, then released,
+    // so the request fails fast and deterministically on any machine.
+    final probe = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final port = probe.port;
+    await probe.close(force: true);
+
     final spy = _CountingOverrides();
-    HttpOverrides.runZoned(() {
+    await HttpOverrides.runZoned(() async {
       final t = HttpModelTransport();
-      expect(spy.created, 0);
+      expect(spy.created, 0, reason: 'no client before the first request');
       // A failing request still has to create the client.
-      t.get(Uri.parse('http://127.0.0.1:1/x')).ignore();
-      expect(spy.created, 1);
+      await expectLater(
+        t.get(
+          Uri.parse('http://${InternetAddress.loopbackIPv4.address}:$port/x'),
+        ),
+        throwsA(isA<SocketException>()),
+      );
+      expect(spy.created, 1, reason: 'exactly one client, built on demand');
     }, createHttpClient: spy.createHttpClient);
   });
 
