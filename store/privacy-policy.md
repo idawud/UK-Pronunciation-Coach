@@ -1,6 +1,6 @@
 # Privacy policy: UK Pronunciation Coach
 
-Last updated: [date of release]
+Last updated: 27 October 2026
 
 UK Pronunciation Coach works entirely on your phone.
 
@@ -16,4 +16,4 @@ UK Pronunciation Coach works entirely on your phone.
 - **Feedback.** "Send feedback" opens a draft in your own email app. You decide whether
   to attach your exported progress file and whether to send it. If you send it, we use
   it only to improve the app and delete it afterwards.
-- **Contact.** [feedback email address]
+- **Contact.** idawudinho@outlook.com

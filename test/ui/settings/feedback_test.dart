@@ -22,12 +22,16 @@ void main() {
       expect(usableFeedbackEmail('a@b'), isNull);
     });
 
-    test('the build default is the placeholder', () {
+    test('the build default is the project address', () {
       // Tests run without --dart-define=FEEDBACK_EMAIL.
-      expect(feedbackEmailDefine, feedbackEmailPlaceholder);
+      expect(feedbackEmailDefine, feedbackEmailDefault);
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      expect(container.read(feedbackEmailProvider), isNull);
+      expect(container.read(feedbackEmailProvider), feedbackEmailDefault);
+    });
+
+    test('the placeholder is still rejected if a build sets it', () {
+      expect(usableFeedbackEmail(feedbackEmailPlaceholder), isNull);
     });
   });
 
