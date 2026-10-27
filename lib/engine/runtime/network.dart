@@ -35,12 +35,15 @@ abstract interface class ModelTransport {
 /// GitHub Release assets use).
 class HttpModelTransport implements ModelTransport {
   /// Creates the transport; pass [client] to customise timeouts or proxies.
-  HttpModelTransport({HttpClient? client})
-    : _client =
-          client ??
-          (HttpClient()..connectionTimeout = const Duration(seconds: 20));
+  HttpModelTransport({HttpClient? client}) : _injected = client;
 
-  final HttpClient _client;
+  final HttpClient? _injected;
+
+  // Built on the first request: the transport is created at every app start-up,
+  // but nothing may touch the network until a download actually begins.
+  late final HttpClient _client =
+      _injected ??
+      (HttpClient()..connectionTimeout = const Duration(seconds: 20));
 
   @override
   Future<ModelResponse> get(Uri url, {int offset = 0}) async {
