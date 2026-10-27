@@ -17,6 +17,13 @@ void main() {
     app.main();
     await tester.pumpAndSettle();
     expect(find.byType(CoachApp), findsOneWidget);
+    // main() owns its ProviderScope, so the test cannot dispose it. Let the
+    // start-up reads (router redirect, profile, reminder restore) finish before
+    // the binding tears the database down under them.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(seconds: 2)),
+    );
+    await tester.pumpAndSettle();
   });
 
   testWidgets('a profile that has not onboarded starts on onboarding', (
