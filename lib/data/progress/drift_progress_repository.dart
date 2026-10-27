@@ -62,6 +62,10 @@ class DriftProgressRepository implements ProgressRepository {
   static const int _profileId = 1;
 
   final ProgressDatabase _db;
+
+  /// Set when [close] starts. A read that fails after this point failed because the
+  /// connection went away under it, which is a normal shutdown, not a fault.
+  bool _closing = false;
   final Clock _clock;
   final RecordingStore _recordings;
   final _changes = StreamController<void>.broadcast();
@@ -76,6 +80,7 @@ class DriftProgressRepository implements ProgressRepository {
 
   /// Closes the database and the [changes] stream.
   Future<void> close() async {
+    _closing = true;
     await _changes.close();
     await _db.close();
   }
@@ -330,7 +335,18 @@ class DriftProgressRepository implements ProgressRepository {
   // ----------------------------------------------------------------- profile
 
   @override
-  Future<UserProfile> profile() => _profile();
+  Future<UserProfile> profile() async {
+    try {
+      return await _profile();
+    } on Object {
+      // Start-up readers (router, reminders, settings) may still be waiting when the
+      // app shuts down and the connection closes under them. Answer them with the
+      // default profile instead of an error nobody is left to handle; a failure
+      // while the store is open still propagates.
+      if (_closing) return const UserProfile();
+      rethrow;
+    }
+  }
 
   Future<UserProfile> _profile() async {
     final r = await (_db.select(
