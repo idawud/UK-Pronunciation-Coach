@@ -49,6 +49,9 @@ APKs are signed with the same key.
 
 ## C. Build from source and install over USB
 
+On a **Windows PC**, follow `build-on-windows.md` instead: it has a setup script and
+covers the USB and WSL details. The rest of this section assumes Linux or macOS.
+
 ### On the computer
 
 You need:
