@@ -9,6 +9,10 @@ are three ways. Pick the first one that's available to you.
 | B. APK from a GitHub Release | After R1's `release.yml` publishes a tagged release | Install the new APK over the old one |
 | C. Build from source over USB | Any time, on a computer with the Flutter and Android tools | Rebuild and reinstall |
 
+> **Beta accuracy.** The app reliably flags clear mispronunciations but misses many subtler
+> ones, and accepts a few American sounds as correct. Details: "What to expect in this beta" in
+> `store/listing.md`.
+
 ## Before you start
 
 - **Phone:** Android 10 or newer (the app's minimum), ideally with 4 GB of RAM or more.

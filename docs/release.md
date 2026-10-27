@@ -31,7 +31,8 @@ Push a tag `vX.Y.Z` (or `vX.Y.Z-beta.N`, which becomes a pre-release) on a commi
   `uk.pronunciationcoach.ukPronunciationCoach` (iOS) are registered in Play Console and
   App Store Connect (change them in `android/app/build.gradle.kts`, the Xcode project and
   `ios/ExportOptions.plist.template` together if yours differ).
-- [ ] Store listing, data safety, privacy label, privacy policy URL: `store/`.
+- [ ] Store listing, data safety, privacy label, privacy policy URL: `store/`. The policy URL is
+  <https://idawud.github.io/UK-Pronunciation-Coach/privacy/> (see "Privacy policy hosting").
 - [ ] Bump `version:` in `pubspec.yaml` (`1.0.0+1`; the number after `+` is the build number and
   must rise on every upload to either store).
 
@@ -96,8 +97,8 @@ limit is hit, check that only needed ABIs ship and that R8 shrinking is on (it i
 
 `STORE_SCREENSHOTS=1 flutter test test/store/store_screenshots_test.dart` renders Home, Read,
 Results and Progress with seeded data into `store/screenshots/<device>/` (git-ignored output).
-Linux only. Captions and the plan are in `store/listing.md`; Play also needs a 1024x500
-feature graphic that nobody has designed yet.
+Linux only. Captions and the plan are in `store/listing.md`. The Play 1024x500 feature graphic is
+`store/play/feature-graphic.png`, made by `python -m tools.release.feature_graphic` (`--check` in pytest).
 
 ## Dry run (do this first)
 
@@ -106,7 +107,41 @@ feature graphic that nobody has designed yet.
    debug-signed fallback must not appear in release.yml output), the draft release lists the files.
 3. Delete the draft and the tag.
 
+## Privacy policy hosting
+
+`store/privacy-policy.md` is the only copy. `.github/workflows/pages.yml` runs
+`python -m tools.release.site` (plain HTML, no scripts, fonts or trackers) and deploys it to
+GitHub Pages whenever the policy changes on `main`, or by hand with "Run workflow".
+URL for both store consoles: **https://idawud.github.io/UK-Pronunciation-Coach/privacy/**
+(also in `store/appstore/privacy-label.md` and `store/play/data-safety.md`).
+
+The one owner setting: repository **Settings > Pages > Build and deployment > Source: GitHub
+Actions**. Nothing publishes until that is set (the deploy job fails harmlessly before it).
+Then run the `pages` workflow once and open the URL to check it.
+
 ## Beta (30-50 learners, 4 weeks)
+
+### What testers are told (accuracy limits)
+
+The beta ships on the current models, with the limits stated plainly. The block to paste is
+"What to expect in this beta" in `store/listing.md`; the README repeats it briefly. Facts, all
+from `docs/eval-report.md` (held-out data, full tier unless stated):
+
+- Clear mispronunciations are flagged reliably. Roughly 3 in 10 injected errors are caught
+  (29.5% red; consonant substitutions 45.7%, vowel substitutions 25.8%, stress 13.9%, added or
+  dropped h 5% to 7%). Weak spots: vowels, z/s, dropped h, word stress.
+- The phoneme model was trained mainly on American (eSpeak en-us) labels, so some American
+  forms pass: the "hot" vowel and the r in "car".
+- False red on correct native British speech: 2.5% of all 2,135 VCTK words (3.5% on the held-out
+  speakers; 1.7% with accepted alternative pronunciations, the way the app scores).
+  **The bundled light model is worse: about 5.9% on the same speakers** (held-out 6.6%), and
+  its recall is lower. Testers who download the full model (Settings) get the figures above.
+- Everything runs on the phone; no recordings leave it.
+
+Update the block in `store/listing.md` if these numbers change. Not yet measured: accuracy
+on real learner speech (no teacher labels), and speed on real phones.
+
+
 
 Goal: check the SPEC success metrics: 40% of learners practising 3+ days a week and +10 points
 on repeated passages over 4 weeks (word agreement with teacher labels is I2's job).
@@ -116,8 +151,11 @@ on repeated passages over 4 weeks (word agreement with teacher labels is I2's jo
 2. **Distribute.** Play Console > Testing > Internal testing (up to 100 testers, by email list)
    and TestFlight internal/external groups (external needs Beta App Review, so allow a few days). Android users
    may instead install the APK from the GitHub Release (`docs/install-android.md`).
-3. **Brief** (use the beta notes in `store/listing.md`): practise at least 3 days a week for 4
-   weeks, re-read passages, try the drills, and use Settings > Send feedback for problems.
+3. **Brief** (use the beta notes in `store/listing.md`, which include "What to expect in this
+   beta"): practise at least 3 days a week for 4 weeks, re-read passages, try the drills, and use
+   Settings > Send feedback for problems. Ask specifically for (a) words they said wrongly that
+   the app marked green and (b) words they said correctly that it marked red, with the passage
+   and word. Both feed the next calibration and the British fine-tune.
    Tell them plainly that nothing is collected and that sending feedback and the progress file
    is their choice.
 4. **Collect.** Weekly reminder email. Testers who agree use Settings > Send feedback; attach
@@ -137,6 +175,33 @@ on repeated passages over 4 weeks (word agreement with teacher labels is I2's jo
 6. **Decide.** Fix blockers from feedback, bump the build number, tag again. When targets and
    reviewer feedback are fine, promote the Play internal build to production and submit the
    TestFlight build for App Review.
+
+## Owner-only beta checklist (in order)
+
+Everything below needs your accounts or machine; none of it was done by an agent.
+
+1. [ ] Set `FEEDBACK_EMAIL` (repository variable) or confirm the built-in default address is
+   the one you want to receive feedback.
+2. [ ] Publish the `models-v1` release and real URLs/SHA-256 in `assets/models/manifest.json`
+   (see "Before the first tag").
+3. [ ] Create the Android upload keystore (`keytool` command above); store it and its passwords
+   in a password manager.
+4. [ ] Add the GitHub secrets and variables from the table above (Android four first; iOS five;
+   upload secrets and `UPLOAD_TO_STORES` only when you want fastlane uploads).
+5. [ ] Turn on Pages: Settings > Pages > Source: GitHub Actions. Run the `pages` workflow and
+   open the privacy-policy URL.
+6. [ ] Register the bundle ids in Play Console and App Store Connect; paste the privacy-policy
+   URL, the data-safety and privacy-label answers from `store/`, the listing text, screenshots
+   and `store/play/feature-graphic.png`.
+7. [ ] Create the Play **internal testing** track and a **TestFlight** group (external group
+   needs Beta App Review; allow a few days).
+8. [ ] Dry run with `v0.0.1-beta.1` on a scratch repo (see "Dry run"), then delete it.
+9. [ ] Confirm `integration.yml` is green on `main` and `version:` in `pubspec.yaml` is `1.0.0+1`.
+10. [ ] Tag `v1.0.0` on that commit of `main`; check the draft GitHub Release and the uploaded
+    builds, then publish the draft yourself.
+11. [ ] Invite 30-50 testers (Play email list; TestFlight invitations) with the "What to expect
+    in this beta" text.
+12. [ ] After four weeks, run `tools/beta/report` and decide (step 6 of the plan above).
 
 ## Rollback
 
