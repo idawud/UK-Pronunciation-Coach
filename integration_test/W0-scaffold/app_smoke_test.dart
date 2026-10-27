@@ -11,8 +11,27 @@ import 'package:uk_pronunciation_coach/main.dart' as app;
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('app starts on onboarding on first run', (tester) async {
+  // main() runs against the real database, whose contents survive between runs on
+  // a device, so this only checks that the app boots and settles on a screen.
+  testWidgets('main() starts the app', (tester) async {
     app.main();
+    await tester.pumpAndSettle();
+    expect(find.byType(CoachApp), findsOneWidget);
+  });
+
+  testWidgets('a profile that has not onboarded starts on onboarding', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          progressRepositoryProvider.overrideWithValue(
+            FakeProgressRepository(),
+          ),
+        ],
+        child: const CoachApp(),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Get started'), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
