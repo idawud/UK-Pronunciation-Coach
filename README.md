@@ -4,6 +4,18 @@ A mobile-first Flutter app for improving Standard Southern British pronunciation
 
 The app listens to the user read a passage aloud, scores pronunciation against a British reference model, highlights problem words, and turns each mistake into a focused practice loop. Everything runs on-device, with no paid speech APIs and no recordings leaving the device.
 
+## Current accuracy (beta)
+
+The beta ships on the current speech models. They reliably flag clear mispronunciations (for
+example "think" said as "tink") but catch only roughly 3 in 10 of the subtler mistakes in our
+test set; vowel errors, z/s, dropped h and word stress are the weak spots. Because the model
+was trained mainly on American English labels, a few American pronunciations (the "hot"
+vowel, the r in "car") are accepted. About 2% of correct words from native British speakers
+are wrongly marked in our measurement with the full model (about 6% with the smaller bundled
+one). A British fine-tune is the planned fix. Figures and method: `docs/eval-report.md`.
+Testers: the most useful reports are words you said wrongly that came out green, and words
+you said correctly that came out red.
+
 ## Why this app exists
 
 UK Pronunciation Coach is designed for adult English speakers, often non-native, who want a clearer, more British accent for work, study, interviews and everyday life.
