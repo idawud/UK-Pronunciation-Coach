@@ -11,12 +11,22 @@ import 'package:uk_pronunciation_coach/ui/settings/reminder_scheduler.dart';
 
 import '../../ui/progress/u4_harness.dart';
 
-/// Holds every select until [gate] opens, then fails it the way a closed drift
-/// channel does.
+/// Holds every select until [gate] opens, then fails it with [error]
+/// (by default the way a closed drift channel does).
 class _FailingSelects extends QueryInterceptor {
-  _FailingSelects(this.gate);
+  _FailingSelects(this.gate, {Object? error}) : error = error ?? channelClosed;
   final Completer<void> gate;
+  final Object error;
   final started = Completer<void>();
+
+  /// What drift's internal `ConnectionClosedException` reports when the channel
+  /// goes away; the repository recognises it as shutdown, not a query failure.
+  static final channelClosed = StateError(
+    'Channel was closed before receiving a response',
+  );
+
+  /// A genuine failure while the store is open.
+  static final diskError = StateError('database disk image is malformed');
 
   @override
   Future<List<Map<String, Object?>>> runSelect(
@@ -26,7 +36,7 @@ class _FailingSelects extends QueryInterceptor {
   ) async {
     if (!started.isCompleted) started.complete();
     await gate.future;
-    throw StateError('Channel was closed before receiving a response');
+    throw error;
   }
 }
 
@@ -55,7 +65,10 @@ void main() {
   test(
     'a profile read that fails while the store is open still throws',
     () async {
-      final selects = _FailingSelects(Completer());
+      final selects = _FailingSelects(
+        Completer(),
+        error: _FailingSelects.diskError,
+      );
       final repo = repoWith(selects);
       final read = repo.profile();
       await selects.started.future;
