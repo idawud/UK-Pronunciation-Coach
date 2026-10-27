@@ -7,7 +7,36 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uk_pronunciation_coach/engine/runtime/network.dart';
 
+class _CountingOverrides extends HttpOverrides {
+  int created = 0;
+
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    created++;
+    return super.createHttpClient(context);
+  }
+}
+
 void main() {
+  test('HttpModelTransport builds no HttpClient until a request is made', () {
+    final spy = _CountingOverrides();
+    HttpOverrides.runZoned(() {
+      final t = HttpModelTransport();
+      expect(spy.created, 0);
+      // A failing request still has to create the client.
+      t.get(Uri.parse('http://127.0.0.1:1/x')).ignore();
+      expect(spy.created, 1);
+    }, createHttpClient: spy.createHttpClient);
+  });
+
+  test('HttpModelTransport uses an injected client without creating one', () {
+    final spy = _CountingOverrides();
+    HttpOverrides.runZoned(() {
+      HttpModelTransport(client: null);
+      expect(spy.created, 0);
+    }, createHttpClient: spy.createHttpClient);
+  });
+
   group('HttpModelTransport (loopback server, no network)', () {
     late HttpServer server;
     HttpOverrides? saved;
