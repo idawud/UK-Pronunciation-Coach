@@ -338,15 +338,27 @@ class DriftProgressRepository implements ProgressRepository {
   Future<UserProfile> profile() async {
     try {
       return await _profile();
-    } on Object {
+    } on Object catch (e) {
       // Start-up readers (router, reminders, settings) may still be waiting when the
       // app shuts down and the connection closes under them. Answer them with the
       // default profile instead of an error nobody is left to handle; a failure
       // while the store is open still propagates.
-      if (_closing) return const UserProfile();
+      //
+      // close() is not always what ends the connection: disposing the provider
+      // scope tears the drift channel down directly, so _closing can still be
+      // false. A closed channel means the database is gone either way.
+      if (_closing || _isConnectionGone(e)) return const UserProfile();
       rethrow;
     }
   }
+
+  /// Whether [e] means the drift connection is gone rather than a query failing.
+  ///
+  /// Matched by name because drift exports only `DriftRemoteException` from
+  /// `remote.dart`; `ConnectionClosedException` is internal.
+  static bool _isConnectionGone(Object e) =>
+      e.runtimeType.toString() == 'ConnectionClosedException' ||
+      e.toString().contains('Channel was closed');
 
   Future<UserProfile> _profile() async {
     final r = await (_db.select(
