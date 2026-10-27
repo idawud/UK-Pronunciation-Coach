@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +14,15 @@ import 'package:uk_pronunciation_coach/ui/settings/local_notifications_reminder_
 import 'package:uk_pronunciation_coach/ui/settings/reminder_scheduler.dart';
 
 import '../progress/u4_harness.dart';
+
+/// A repository whose profile read waits on [_profile].
+class _GatedRepo extends FakeProgressRepository {
+  _GatedRepo(this._profile);
+  final Future<UserProfile> _profile;
+
+  @override
+  Future<UserProfile> profile() => _profile;
+}
 
 /// Records what the scheduler asks of the plug-in.
 class FakeNotifications implements ReminderNotifications {
@@ -336,6 +348,44 @@ void main() {
       await container.read(reminderRestoreProvider.future);
       return reminders;
     }
+
+    for (final fail in [true, false]) {
+      test('disposed mid-restore (profile read ${fail ? 'fails' : 'succeeds'}) '
+          'schedules nothing and leaks no error', () async {
+        final gate = Completer<UserProfile>();
+        final repo = _GatedRepo(gate.future);
+        final reminders = RecordingReminderScheduler(supported: true);
+        final container = ProviderContainer(
+          overrides: [
+            progressRepositoryProvider.overrideWithValue(repo),
+            reminderSchedulerProvider.overrideWithValue(reminders),
+          ],
+        );
+        final sub = container.listen(reminderRestoreProvider, (_, _) {});
+        await Future<void>.delayed(Duration.zero);
+        sub.close();
+        container.dispose();
+        if (fail) {
+          gate.completeError(StateError('Channel was closed'));
+        } else {
+          gate.complete(const UserProfile(reminderMinutes: 480));
+        }
+        await Future<void>.delayed(Duration.zero);
+        expect(reminders.scheduled, isEmpty);
+      });
+    }
+
+    test(
+      'a scheduling failure while live is still logged, not thrown',
+      () async {
+        final logs = <String?>[];
+        final old = debugPrint;
+        debugPrint = (m, {wrapWidth}) => logs.add(m);
+        addTearDown(() => debugPrint = old);
+        await restore(const UserProfile(reminderMinutes: 480), fail: true);
+        expect(logs.join(), contains('could not restore'));
+      },
+    );
 
     test('re-schedules the saved reminder', () async {
       final r = await restore(const UserProfile(reminderMinutes: 480));
