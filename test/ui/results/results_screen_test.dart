@@ -6,10 +6,12 @@ import 'package:uk_pronunciation_coach/core/contracts/contracts.dart';
 import 'package:uk_pronunciation_coach/core/fakes/fakes.dart';
 import 'package:uk_pronunciation_coach/core/models/models.dart';
 import 'package:uk_pronunciation_coach/core/providers.dart';
+import 'package:uk_pronunciation_coach/ui/results/playback_bar.dart';
 import 'package:uk_pronunciation_coach/ui/results/results_screen.dart';
 import 'package:uk_pronunciation_coach/ui/results/word_sheet.dart';
 import 'package:uk_pronunciation_coach/ui/theme/score_colors.dart';
 
+import 'blocking_voice.dart';
 import 'harness.dart';
 
 class _MockEngine extends Mock implements PracticeEngine {}
@@ -303,4 +305,151 @@ void main() {
     expect(find.text('Fix 2 red words'), findsOneWidget);
     expect(wordStyle(tester, 'Thursday')!.color, ScoreColors.light.good);
   });
+
+  group('playback bar', () {
+    Finder playButton(String tooltip) => find.ancestor(
+      of: find.byTooltip(tooltip),
+      matching: find.byType(IconButton),
+    );
+
+    testWidgets('shows three play icons', (tester) async {
+      await pumpResults(tester, Fakes(), river);
+      expect(
+        find.descendant(
+          of: find.byType(PlaybackBar),
+          matching: find.byType(IconButton),
+        ),
+        findsNWidgets(3),
+      );
+      expect(find.byTooltip('Play sentence'), findsOneWidget);
+      expect(find.byTooltip('Play with stressed words slowed'), findsOneWidget);
+      expect(find.byTooltip('Play mistakes only'), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+      expect(find.byIcon(Icons.record_voice_over), findsOneWidget);
+      expect(find.byIcon(Icons.spellcheck), findsOneWidget);
+    });
+
+    testWidgets('sentence button speaks the whole passage at normal speed', (
+      tester,
+    ) async {
+      final fakes = Fakes();
+      await pumpResults(tester, fakes, river);
+      await tester.tap(find.byTooltip('Play sentence'));
+      await tester.pumpAndSettle();
+      expect(fakes.voice.spoken, [
+        (
+          'On Thursday we walked by the river We passed an old castle and a '
+              'farm At home I had a hot bath and a cup of tea',
+          1.0,
+        ),
+      ]);
+    });
+
+    testWidgets('stressed button slows the non-good words', (tester) async {
+      final fakes = Fakes();
+      await pumpResults(tester, fakes, river);
+      await tester.tap(find.byTooltip('Play with stressed words slowed'));
+      await tester.pumpAndSettle();
+      expect(fakes.voice.spoken, [
+        ('On', 1.0),
+        ('Thursday', VoiceService.slowRate),
+        ('we', 1.0),
+        ('walked', VoiceService.slowRate),
+        ('by the', 1.0),
+        ('river', VoiceService.slowRate),
+        ('We passed an old', 1.0),
+        ('castle', VoiceService.slowRate),
+        ('and a farm At home I had a hot', 1.0),
+        ('bath', VoiceService.slowRate),
+        ('and a cup of tea', 1.0),
+      ]);
+    });
+
+    testWidgets('mistakes button speaks each wrong word slowly', (
+      tester,
+    ) async {
+      final fakes = Fakes();
+      await pumpResults(tester, fakes, river);
+      await tester.tap(find.byTooltip('Play mistakes only'));
+      await tester.pumpAndSettle();
+      expect(fakes.voice.spoken, [
+        ('Thursday', VoiceService.slowRate),
+        ('walked', VoiceService.slowRate),
+        ('river', VoiceService.slowRate),
+        ('castle', VoiceService.slowRate),
+        ('bath', VoiceService.slowRate),
+      ]);
+    });
+
+    testWidgets('mistakes button is disabled when every word is good', (
+      tester,
+    ) async {
+      final good = goodAttempt(riverPassage, id: 'g', at: DateTime(2026));
+      await pumpResults(tester, Fakes(), ResultsArgs(result: good));
+      final button = tester.widget<IconButton>(
+        playButton('Play mistakes only'),
+      );
+      expect(button.onPressed, isNull);
+      expect(
+        tester.widget<IconButton>(playButton('Play sentence')).onPressed,
+        isNotNull,
+      );
+    });
+
+    testWidgets('tapping the active button stops playback', (tester) async {
+      final voice = BlockingVoice();
+      await _pumpWithVoice(tester, Fakes(), voice, river);
+
+      await tester.tap(find.byTooltip('Play sentence'));
+      await tester.pump();
+      expect(voice.spoken.length, 1);
+      expect(find.byIcon(Icons.stop), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Play sentence'));
+      await tester.pump();
+      expect(voice.stopCount, 1);
+      expect(find.byIcon(Icons.stop), findsNothing);
+      expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+    });
+
+    testWidgets('leaving the screen stops playback', (tester) async {
+      final voice = BlockingVoice();
+      await _pumpWithVoice(tester, Fakes(), voice, river);
+      await tester.tap(find.byTooltip('Play sentence'));
+      await tester.pump();
+      expect(voice.pendingCount, 1);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      expect(voice.stopCount, 1);
+      expect(voice.pendingCount, 0);
+    });
+  });
+}
+
+/// Pumps Results with [voice] as the voice service (the harness fake cannot block).
+Future<void> _pumpWithVoice(
+  WidgetTester tester,
+  Fakes fakes,
+  BlockingVoice voice,
+  ResultsArgs args,
+) async {
+  tester.view.physicalSize = phoneSize;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        audioRecorderProvider.overrideWithValue(fakes.recorder),
+        contentRepositoryProvider.overrideWithValue(fakes.content),
+        progressRepositoryProvider.overrideWithValue(fakes.progress),
+        pronunciationScorerProvider.overrideWithValue(fakes.scorer),
+        phonemeRecognizerProvider.overrideWithValue(fakes.recognizer),
+        voiceServiceProvider.overrideWithValue(voice),
+        tipsProvider.overrideWithValue(FakeTips()),
+      ],
+      child: MaterialApp(home: ResultsScreen(args: args)),
+    ),
+  );
+  await tester.pumpAndSettle();
 }

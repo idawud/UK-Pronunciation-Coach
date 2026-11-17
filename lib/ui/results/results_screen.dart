@@ -8,6 +8,8 @@ import '../../core/contracts/contracts.dart';
 import '../../core/models/models.dart';
 import '../../core/providers.dart';
 import 'passage_text.dart';
+import 'playback_bar.dart';
+import 'playback_controller.dart';
 import 'score_summary.dart';
 import 'word_sheet.dart';
 
@@ -37,11 +39,19 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   Passage? _passage;
   bool _passageFailed = false;
   bool _loadingNext = false;
+  late final SegmentPlayer _player;
 
   @override
   void initState() {
     super.initState();
+    _player = SegmentPlayer(ref.read(voiceServiceProvider));
     unawaited(_loadPassage());
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPassage() async {
@@ -101,6 +111,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   }
 
   Future<void> _fixRedWords() async {
+    await _player.stop();
+    if (!mounted) return;
     final updated = await context.push<AttemptResult>(
       AppRoutes.fix,
       extra: FixArgs(result: _result),
@@ -110,6 +122,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   Future<void> _nextPassage() async {
     setState(() => _loadingNext = true);
+    await _player.stop();
     try {
       final next = await ref.read(practiceEngineProvider).nextPassage();
       if (!mounted) return;
@@ -183,6 +196,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
         const SizedBox(height: 8),
       ],
       passageBody,
+      if (_result.words.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        PlaybackBar(words: _result.words, player: _player),
+      ],
       if (_passageFailed) ...[
         const SizedBox(height: 8),
         Text(
