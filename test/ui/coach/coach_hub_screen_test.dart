@@ -81,7 +81,7 @@ void main() {
     expect(find.byType(SoundsScreen), findsNothing);
   });
 
-  testWidgets('stub routes resolve under /coach', (tester) async {
+  testWidgets('section routes resolve under /coach', (tester) async {
     final router = await pumpHub(tester, InMemoryCoachStore());
     for (final (path, type) in [
       (coachConfusionsPath, ConfusionsScreen),
@@ -92,7 +92,6 @@ void main() {
       router.go(path);
       await tester.pumpAndSettle();
       expect(find.byType(type), findsOneWidget, reason: path);
-      expect(find.text('Coming soon'), findsOneWidget, reason: path);
     }
   });
 
