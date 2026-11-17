@@ -2,29 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/contracts/navigation.dart';
-import '../../core/contracts/voice_service.dart';
-import '../../core/models/models.dart';
-import '../../core/providers.dart';
-import '../shell/state_views.dart';
-import '../theme/theme.dart';
+import '../../../core/contracts/navigation.dart';
+import '../../../core/contracts/voice_service.dart';
+import '../../../core/models/models.dart';
+import '../../../core/providers.dart';
+import '../../shell/state_views.dart';
+import '../../theme/theme.dart';
 import 'coach_data.dart';
 import 'coach_exercises.dart';
 import 'coach_speech.dart';
 
-/// Coach tab: a simple speech-therapy coach. Guided exercises for the user's weakest
+/// Sounds section of the Coach tab: a simple speech-therapy coach. Guided exercises for the user's weakest
 /// sounds (from `coachDataProvider`) sit above a fixed library of warm-ups, tongue
 /// twisters and pace and breathing exercises. The coach speaks each model line with
 /// the offline en-GB voice; nothing is scored.
-class CoachScreen extends ConsumerStatefulWidget {
+class SoundsScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
-  const CoachScreen({super.key});
+  const SoundsScreen({super.key});
 
   @override
-  ConsumerState<CoachScreen> createState() => _CoachScreenState();
+  ConsumerState<SoundsScreen> createState() => _SoundsScreenState();
 }
 
-class _CoachScreenState extends ConsumerState<CoachScreen> {
+class _SoundsScreenState extends ConsumerState<SoundsScreen> {
   /// Captured here so speech can be stopped in [dispose] without a ref.
   late final VoiceService _voice;
   late final CoachSpeech _speech;
@@ -65,7 +65,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
   Widget build(BuildContext context) {
     final data = ref.watch(coachDataProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Coach')),
+      appBar: AppBar(title: const Text('Sounds')),
       body: switch (data) {
         AsyncValue(:final List<GuidedExercise> value) => _CoachBody(
           guided: value,

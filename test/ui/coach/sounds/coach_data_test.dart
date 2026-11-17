@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:uk_pronunciation_coach/core/contracts/tips.dart';
 import 'package:uk_pronunciation_coach/core/fakes/fakes.dart';
 import 'package:uk_pronunciation_coach/core/models/models.dart';
-import 'package:uk_pronunciation_coach/ui/coach/coach_data.dart';
+import 'package:uk_pronunciation_coach/ui/coach/sounds/coach_data.dart';
 
 /// Tips keyed by 'expected|heard' so a test controls exactly which pair has advice.
 class _StubTips implements Tips {
