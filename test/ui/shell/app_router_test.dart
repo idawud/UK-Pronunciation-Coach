@@ -9,6 +9,8 @@ import 'package:uk_pronunciation_coach/app.dart';
 import 'package:uk_pronunciation_coach/core/contracts/contracts.dart';
 import 'package:uk_pronunciation_coach/core/fakes/fakes.dart';
 import 'package:uk_pronunciation_coach/core/models/models.dart';
+import 'package:uk_pronunciation_coach/ui/coach/coach_routes.dart';
+import 'package:uk_pronunciation_coach/ui/coach/coach_screen.dart';
 import 'package:uk_pronunciation_coach/ui/fix/fix_screen.dart';
 import 'package:uk_pronunciation_coach/ui/home/home_screen.dart';
 import 'package:uk_pronunciation_coach/ui/onboarding/onboarding_screen.dart';
@@ -43,6 +45,7 @@ void main() {
     for (final (tab, type) in [
       ('Practise', PractiseScreen),
       ('Progress', ProgressScreen),
+      ('Coach', CoachScreen),
       ('Settings', SettingsScreen),
     ]) {
       await tester.tap(find.text(tab).last);
@@ -65,6 +68,31 @@ void main() {
     await tester.tap(find.text('Practise'));
     await tester.pumpAndSettle();
     expect(find.byType(PractiseScreen), findsOneWidget);
+
+    await tester.tap(find.text('Coach'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CoachScreen), findsOneWidget);
+  });
+
+  testWidgets('router.go selects the matching tab index', (tester) async {
+    final s = await seedEmpty();
+    final router = await pumpApp(tester, s);
+    // Branch order = _tabs order: Home 0, Practise 1, Progress 2, Coach 3, Settings 4.
+    for (final (path, index) in [
+      (AppRoutes.home, 0),
+      (AppRoutes.practise, 1),
+      (AppRoutes.progress, 2),
+      (coachPath, 3),
+      (AppRoutes.settings, 4),
+    ]) {
+      router.go(path);
+      await tester.pumpAndSettle();
+      final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(bar.selectedIndex, index, reason: path);
+    }
+    router.go(coachPath);
+    await tester.pumpAndSettle();
+    expect(find.byType(CoachScreen), findsOneWidget);
   });
 
   testWidgets('first run redirects to onboarding, then Home', (tester) async {
@@ -77,6 +105,11 @@ void main() {
     router.go(AppRoutes.progress);
     await tester.pumpAndSettle();
     expect(find.byType(OnboardingScreen), findsOneWidget);
+
+    router.go(coachPath);
+    await tester.pumpAndSettle();
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+    expect(find.byType(CoachScreen), findsNothing);
 
     // Read is not gated (placement uses it).
     unawaited(
@@ -165,6 +198,10 @@ void main() {
       );
       expect(
         await onboardingRedirect(s.progress, AppRoutes.licences),
+        AppRoutes.onboarding,
+      );
+      expect(
+        await onboardingRedirect(s.progress, coachPath),
         AppRoutes.onboarding,
       );
       for (final path in [

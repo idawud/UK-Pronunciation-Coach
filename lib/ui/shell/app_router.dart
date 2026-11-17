@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/contracts/navigation.dart';
 import '../../core/contracts/progress_repository.dart';
 import '../../core/providers.dart';
+import '../coach/coach_routes.dart';
+import '../coach/coach_screen.dart';
 import '../fix/fix_screen.dart';
 import '../home/home_screen.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -21,6 +23,7 @@ const _gatedPaths = {
   AppRoutes.home,
   AppRoutes.practise,
   AppRoutes.progress,
+  coachPath,
   AppRoutes.settings,
   AppRoutes.licences,
 };
@@ -43,9 +46,12 @@ Future<String?> onboardingRedirect(
 }
 
 /// The app router (seeded by W0 with every route in `AppRoutes`; U1 owns it).
-/// Tabs use a stateful shell; Read, Results, Fix and Onboarding are full-screen.
+/// Tabs use a stateful shell, in this order: Home, Practise, Progress, Coach, Settings
+/// (branch index = tab index). Read, Results, Fix and Onboarding are full-screen.
 /// Until onboarding is done the tab routes redirect to [AppRoutes.onboarding].
 /// The Practise tab takes an optional `?tab=library|sounds|review` query.
+/// The Coach tab's path is [coachPath] until `AppRoutes.coach` is added to the
+/// contracts (see docs/contract-requests/u1-coach.md).
 final appRouterProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
     initialLocation: AppRoutes.home,
@@ -82,6 +88,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.progress,
                 builder: (context, state) => const ProgressScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: coachPath,
+                builder: (context, state) => const CoachScreen(),
               ),
             ],
           ),
@@ -132,8 +146,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return router;
 });
 
-/// Navigation shell: Home, Practise, Progress, Settings. A bottom navigation bar on
-/// phones and portrait tablets; a navigation rail from [Breakpoints.rail] wide.
+/// Navigation shell: Home, Practise, Progress, Coach, Settings. A bottom navigation bar
+/// on phones and portrait tablets; a navigation rail from [Breakpoints.rail] wide.
+/// `_tabs` order must match the branch order in the router (Coach is index 3).
 class AppShell extends StatelessWidget {
   /// Creates the shell around [shell].
   const AppShell({super.key, required this.shell});
@@ -145,6 +160,7 @@ class AppShell extends StatelessWidget {
     (Icons.home_outlined, Icons.home, 'Home'),
     (Icons.menu_book_outlined, Icons.menu_book, 'Practise'),
     (Icons.insights_outlined, Icons.insights, 'Progress'),
+    (Icons.record_voice_over_outlined, Icons.record_voice_over, 'Coach'),
     (Icons.settings_outlined, Icons.settings, 'Settings'),
   ];
 
