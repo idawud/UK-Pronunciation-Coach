@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/contracts/navigation.dart';
+import '../../core/contracts/voice_service.dart';
 import '../../core/models/models.dart';
+import '../../core/providers.dart';
 import 'read_state.dart';
 import 'scoring_controller.dart';
 import 'widgets/record_controls.dart';
@@ -35,12 +37,24 @@ class _ReadScreenState extends ConsumerState<ReadScreen> {
   late final AppLifecycleListener _lifecycle;
   bool _left = false;
 
+  /// Voice captured in [initState] so [dispose] can stop speech; `ref` is unusable
+  /// once the element is disposed.
+  late final VoiceService _voice;
+
+  /// Whether the whole passage is being played back by the preview button.
+  bool _previewing = false;
+
+  /// Generation of the current preview. Bumped on every stop, so a speak that
+  /// finishes after a stop (or after a newer preview began) does not reset state.
+  int _gen = 0;
+
   ScoringController get _controller =>
       ref.read(scoringControllerProvider(widget.args).notifier);
 
   @override
   void initState() {
     super.initState();
+    _voice = ref.read(voiceServiceProvider);
     // Back from the system settings page: the permission may have changed.
     _lifecycle = AppLifecycleListener(
       onResume: () => _controller.recheckPermission(),
@@ -49,8 +63,39 @@ class _ReadScreenState extends ConsumerState<ReadScreen> {
 
   @override
   void dispose() {
+    _gen++;
     _lifecycle.dispose();
+    _voice.stop();
     super.dispose();
+  }
+
+  /// Starts playing [text] (the whole passage), or stops the playback in progress.
+  Future<void> _togglePreview(String text) async {
+    if (_previewing) {
+      await _stopPreview();
+      return;
+    }
+    final g = ++_gen;
+    setState(() => _previewing = true);
+    try {
+      await _voice.speak(text);
+    } catch (_) {
+      if (mounted && g == _gen) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No British voice available')),
+        );
+      }
+    } finally {
+      if (mounted && g == _gen) setState(() => _previewing = false);
+    }
+  }
+
+  /// Ends the preview: invalidates the pending speak, resets the button, and stops
+  /// the voice.
+  Future<void> _stopPreview() async {
+    _gen++;
+    if (mounted) setState(() => _previewing = false);
+    await _voice.stop();
   }
 
   void _onDone(ReadDone done) {
@@ -73,6 +118,8 @@ class _ReadScreenState extends ConsumerState<ReadScreen> {
     final provider = scoringControllerProvider(widget.args);
     ref.listen(provider, (_, next) {
       if (next.phase case final ReadDone done) _onDone(done);
+      // Recording and the preview must not overlap.
+      if (next.phase is ReadRecording && _previewing) _stopPreview();
     });
     final state = ref.watch(provider);
     final content = state.content;
@@ -81,6 +128,11 @@ class _ReadScreenState extends ConsumerState<ReadScreen> {
         title: Text(_title(content)),
         actions: [
           if (content != null) ...[
+            IconButton(
+              tooltip: _previewing ? 'Stop' : 'Listen to the passage',
+              icon: Icon(_previewing ? Icons.stop : Icons.volume_up),
+              onPressed: () => _togglePreview(content.passage.text),
+            ),
             IconButton(
               tooltip: 'Smaller text',
               icon: const Icon(Icons.text_decrease),
