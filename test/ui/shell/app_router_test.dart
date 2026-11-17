@@ -10,7 +10,7 @@ import 'package:uk_pronunciation_coach/core/contracts/contracts.dart';
 import 'package:uk_pronunciation_coach/core/fakes/fakes.dart';
 import 'package:uk_pronunciation_coach/core/models/models.dart';
 import 'package:uk_pronunciation_coach/ui/coach/coach_routes.dart';
-import 'package:uk_pronunciation_coach/ui/coach/coach_screen.dart';
+import 'package:uk_pronunciation_coach/ui/coach/coach_hub_screen.dart';
 import 'package:uk_pronunciation_coach/ui/fix/fix_screen.dart';
 import 'package:uk_pronunciation_coach/ui/home/home_screen.dart';
 import 'package:uk_pronunciation_coach/ui/onboarding/onboarding_screen.dart';

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/contracts/tips.dart';
-import '../../core/models/models.dart';
-import '../../core/providers.dart';
+import '../../../core/contracts/tips.dart';
+import '../../../core/models/models.dart';
+import '../../../core/providers.dart';
 
 /// How many weakest sounds the Coach tab turns into guided exercises.
 const int coachGuidedCount = 3;

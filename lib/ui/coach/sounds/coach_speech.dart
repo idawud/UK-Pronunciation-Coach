@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../../core/contracts/voice_service.dart';
+import '../../../core/contracts/voice_service.dart';
 
 /// Play and stop for the Coach tab. Only one utterance plays at a time, and [playing]
 /// says which button is active so every toggle can show play or stop.

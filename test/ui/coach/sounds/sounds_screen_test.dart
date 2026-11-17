@@ -9,12 +9,12 @@ import 'package:uk_pronunciation_coach/core/contracts/contracts.dart';
 import 'package:uk_pronunciation_coach/core/fakes/fakes.dart';
 import 'package:uk_pronunciation_coach/core/models/models.dart';
 import 'package:uk_pronunciation_coach/core/providers.dart';
-import 'package:uk_pronunciation_coach/ui/coach/coach_exercises.dart';
-import 'package:uk_pronunciation_coach/ui/coach/coach_screen.dart';
+import 'package:uk_pronunciation_coach/ui/coach/sounds/coach_exercises.dart';
+import 'package:uk_pronunciation_coach/ui/coach/sounds/sounds_screen.dart';
 import 'package:uk_pronunciation_coach/ui/shell/state_views.dart';
 import 'package:uk_pronunciation_coach/ui/theme/theme.dart';
 
-import '../shell/harness.dart';
+import '../../shell/harness.dart';
 
 class _MockProgress extends Mock implements ProgressRepository {}
 
@@ -44,7 +44,7 @@ Future<List<Pushed>> _pumpCoach(
 ) async {
   final log = <Pushed>[];
   await tester.pumpWidget(
-    routerHarness(const CoachScreen(), overrides: overrides, log: log),
+    routerHarness(const SoundsScreen(), overrides: overrides, log: log),
   );
   await tester.pumpAndSettle();
   return log;
@@ -58,7 +58,7 @@ void main() {
     when(progress.soundStats).thenAnswer((_) => never.future);
     await tester.pumpWidget(
       routerHarness(
-        const CoachScreen(),
+        const SoundsScreen(),
         overrides: [
           progressRepositoryProvider.overrideWithValue(progress),
           voiceServiceProvider.overrideWithValue(FakeVoiceService()),

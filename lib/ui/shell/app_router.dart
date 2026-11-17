@@ -5,8 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/contracts/navigation.dart';
 import '../../core/contracts/progress_repository.dart';
 import '../../core/providers.dart';
+import '../coach/coach_hub_screen.dart';
 import '../coach/coach_routes.dart';
-import '../coach/coach_screen.dart';
+import '../coach/coach_sections.dart';
 import '../fix/fix_screen.dart';
 import '../home/home_screen.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -36,7 +37,9 @@ Future<String?> onboardingRedirect(
   ProgressRepository progress,
   String location,
 ) async {
-  if (!_gatedPaths.contains(location)) return null;
+  final gated =
+      _gatedPaths.contains(location) || location.startsWith('$coachPath/');
+  if (!gated) return null;
   try {
     final profile = await progress.profile();
     return profile.onboardingDone ? null : AppRoutes.onboarding;
@@ -96,6 +99,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: coachPath,
                 builder: (context, state) => const CoachScreen(),
+                routes: [
+                  for (final s in coachSections)
+                    GoRoute(
+                      path: s.id,
+                      builder: (context, state) => s.builder(context),
+                    ),
+                ],
               ),
             ],
           ),

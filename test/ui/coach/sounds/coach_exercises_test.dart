@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uk_pronunciation_coach/core/contracts/voice_service.dart';
-import 'package:uk_pronunciation_coach/ui/coach/coach_exercises.dart';
+import 'package:uk_pronunciation_coach/ui/coach/sounds/coach_exercises.dart';
 
 void main() {
   test('exercise ids are unique', () {
