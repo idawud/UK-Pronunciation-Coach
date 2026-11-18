@@ -9,6 +9,7 @@ import 'package:uk_pronunciation_coach/ui/coach/coach_hub_screen.dart';
 import 'package:uk_pronunciation_coach/ui/coach/coach_routes.dart';
 import 'package:uk_pronunciation_coach/ui/coach/confusions/confusions_screen.dart';
 import 'package:uk_pronunciation_coach/ui/coach/describe/describe_screen.dart';
+import 'package:uk_pronunciation_coach/ui/coach/ipa/ipa_screen.dart';
 import 'package:uk_pronunciation_coach/ui/coach/record/record_compare_screen.dart';
 import 'package:uk_pronunciation_coach/ui/coach/sounds/sounds_screen.dart';
 import 'package:uk_pronunciation_coach/ui/coach/words/words_screen.dart';
@@ -47,7 +48,8 @@ void main() {
   testWidgets('the hub shows one card per section', (tester) async {
     await pumpHub(tester, InMemoryCoachStore());
     expect(find.byType(CoachScreen), findsOneWidget);
-    expect(find.byType(Card), findsNWidgets(5));
+    // The list is lazy: the first five cards are on screen, the IPA card sits just
+    // above the reset action.
     for (final title in [
       'Sounds',
       'Confusions',
@@ -59,6 +61,7 @@ void main() {
       expect(find.widgetWithText(ListTile, title), findsWidgets);
     }
     await scrollToReset(tester);
+    expect(find.widgetWithText(ListTile, 'IPA lessons'), findsWidgets);
     expect(find.text('Reset Coach data'), findsOneWidget);
   });
 
@@ -88,6 +91,7 @@ void main() {
       (coachWordsPath, WordsScreen),
       (coachRecordPath, RecordCompareScreen),
       (coachDescribePath, DescribeScreen),
+      (coachIpaPath, IpaScreen),
     ]) {
       router.go(path);
       await tester.pumpAndSettle();

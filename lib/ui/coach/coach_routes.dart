@@ -15,3 +15,6 @@ const coachRecordPath = '$coachPath/record';
 
 /// Describe section: describe it and phrases.
 const coachDescribePath = '$coachPath/describe';
+
+/// IPA lessons section: the sounds of British English, with examples and a quick check.
+const coachIpaPath = '$coachPath/ipa';

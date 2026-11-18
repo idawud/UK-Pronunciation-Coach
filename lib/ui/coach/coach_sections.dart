@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'coach_routes.dart';
 import 'confusions/confusions_screen.dart';
 import 'describe/describe_screen.dart';
+import 'ipa/ipa_screen.dart';
 import 'record/record_compare_screen.dart';
 import 'sounds/sounds_screen.dart';
 import 'words/words_screen.dart';
@@ -81,5 +82,13 @@ final coachSections = <CoachSection>[
     icon: Icons.chat_bubble_outline,
     subPath: coachDescribePath,
     builder: (_) => const DescribeScreen(),
+  ),
+  CoachSection(
+    id: 'ipa',
+    title: 'IPA lessons',
+    subtitle: 'Learn every sound of British English',
+    icon: Icons.abc,
+    subPath: coachIpaPath,
+    builder: (_) => const IpaScreen(),
   ),
 ];
