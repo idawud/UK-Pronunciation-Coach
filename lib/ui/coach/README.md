@@ -13,7 +13,7 @@ Nothing here is scored; the coach speaks model lines and the user copies them.
   builder; no logic.
 - `coach_routes.dart`: `coachPath` (`/coach`) and one `coach<Section>Path` per
   section (`/coach/sounds`, `/coach/confusions`, `/coach/words`, `/coach/record`,
-  `/coach/describe`).
+  `/coach/describe`, `/coach/ipa`).
 - `sounds/`: the Sounds section (weakest sounds and the exercise library), moved from
   the original Coach screen.
   - `sounds_screen.dart`: `SoundsScreen`. Guided section first (empty state included),
@@ -23,6 +23,17 @@ Nothing here is scored; the coach speaks model lines and the user copies them.
     `coachDataProvider` (autoDispose, refreshes on `progressChangesProvider`).
   - `coach_exercises.dart`: `CoachCategory`, `CoachExercise` and the fixed `coachLibrary`.
   - `coach_speech.dart`: `CoachSpeech`, a play and stop helper with a generation token.
+- `ipa/`: the IPA lessons section (its hub card is the sixth entry in `coachSections`).
+  - `ipa_content.dart`: the 44 sounds (12 vowels, 8 diphthongs, 24 consonants) as
+    const `IpaSound`s, the intro lesson and the group and manner enums. Symbols match the
+    scorer's phoneme inventory (`lib/engine/scoring/data/phoneme_map.dart`).
+  - `ipa_quiz.dart`: pure `buildIpaQuizQuestion` for the Quick check (injectable `Random`).
+  - `ipa_providers.dart`: `IpaRepository` (learned symbols under the `ipa` store key,
+    `{learned: [...]}`), `ipaLearnedProvider` and `ipaRandomProvider`.
+  - `ipa_screen.dart`: `IpaScreen` (hub), the intro, the grid (`IpaGridScreen`, one group
+    or the full chart) and `IpaSymbolChip`. Sub-pages use the navigator.
+  - `ipa_sound_screen.dart`: `IpaSoundScreen`. Play buttons speak whole example words
+    (normal and slow), because the voice cannot say one sound on its own.
 - `confusions/`, `words/`, `record/`, `describe/`: stub screens (`ConfusionsScreen`,
   `WordsScreen`, `RecordCompareScreen`, `DescribeScreen`). Each shows "Coming soon".
   **To build a section, overwrite only its stub file.** Keep the class name and
@@ -47,4 +58,5 @@ Nothing here is scored; the coach speaks model lines and the user copies them.
   `docs/contract-requests/coach-hub.md`.
 
 Tests: `test/ui/coach/` (hub, sections, sounds), `test/ui/coach/sounds/` (Sounds
-screen and its helpers), and `test/data/coach/` (store).
+screen and its helpers), `test/ui/coach/ipa/` (IPA content, quiz, progress and screens),
+and `test/data/coach/` (store).
